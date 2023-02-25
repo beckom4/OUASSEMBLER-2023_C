@@ -3,14 +3,14 @@
 /*Defining a linked list that will contain the macros. The list is declared in the h file and defined here in order to keep the encapsulation principle.*/
 struct Macros {
 	int macro_flag_in_list;
-	char macro[MAX_MACRO];
+	char *macro;
 	struct Macros* next;
 };
 
 
 int main_pre_processor(FILE *fptr)
 {	
-	int i,macroflag;
+	int macro_counter,macroflag;
 
 	size_t len_of_line, len_of_txt;
 	
@@ -20,14 +20,14 @@ int main_pre_processor(FILE *fptr)
 	char line[MAX_LINE];
 	char *portion, *new_txt,*original_txt;
 
-	struct Macros* head;
+	struct Macros *head, *temp;
 
 	new_txt = (char*)malloc(sizeof(char));
 	original_txt = (char*)malloc(sizeof(char));
 
 	head = NULL;
 	
-	i = 0;
+	macro_counter = 0;
 	
 	while (fgets(original_txt, MAX_LINE, fptr)) 
     	{
@@ -42,11 +42,23 @@ int main_pre_processor(FILE *fptr)
 				new_txt = insert_string(new_txt,macroflag,head);
 				if(new_txt == NULL)
 				{
-				printf("The system could not allocate enough memory for some of your text.\n");
-				return END_PROGRAM;
+					printf("The system could not allocate enough memory for some of your text.\n");
+					return END_PROGRAM;
 				}	
 			}
-
+			else if(strcmp(portion,mcr))
+			{
+				/*Adding the macro to the head of the list*/
+				temp = createMacro(head,macro_counter,portion);
+				++macro_counter;
+				if (temp == NULL)
+				{
+					printf("The system could not allocate enough memory for some of your text.\n");
+					return END_PROGRAM;
+				} 
+				else
+					head = temp;
+			}
 		}
 	}
 	return 0;
@@ -94,3 +106,17 @@ char *insert_string(char *new_txt, int macroflag, struct Macros *head)
 	}
 	return new_txt;
 }
+
+
+struct Macros *createMacro(struct Macros *next, int counter, char *macro) 
+{
+	struct Macros *newMacro = (struct Macros*)malloc(sizeof(Macros));
+	if(newMacro == NULL)
+		return NULL;
+	newMacro->macro_flag_in_list = counter;
+	strcpy(newMacro->macro,macro);
+    	newMacro->next = next;
+   	return newMacro;
+}
+
+
