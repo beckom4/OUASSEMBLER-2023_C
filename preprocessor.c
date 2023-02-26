@@ -3,7 +3,7 @@
 /*Defining a linked list that will contain the macros. The list is declared in the h file and defined here in order to keep the encapsulation principle.*/
 struct Macros {
 	int macro_flag_in_list;
-	char *macro;
+	char *macro, *macro_name;
 	struct Macros* next;
 };
 
@@ -12,30 +12,30 @@ int main_pre_processor(FILE *fptr)
 {	
 	int macro_counter,macroflag;
 
-	size_t len_of_line, len_of_txt;
-	
-	char c;
-	char mcr[] = "mcr\0";
-	char endmcr[] = "endmcr\0";
-	char line[MAX_LINE];
-	char *portion, *new_txt,*original_txt;
+	size_t len_of_txt;
+
+	char mcr[] = "mcr\0";	
+	char *portion, *new_txt,*original_line;
 
 	struct Macros *head, *temp;
 
 	new_txt = (char*)malloc(sizeof(char));
-	original_txt = (char*)malloc(sizeof(char));
+	original_line = (char*)malloc(sizeof(char));
 
 	head = NULL;
 	
 	macro_counter = 0;
+	len_of_txt = 0;
 	
-	while (fgets(original_txt, MAX_LINE, fptr)) 
+	while (fgets(original_line, MAX_LINE, fptr)) 
     	{
-		original_txt = (char*)realloc(original_txt, sizeof(char) * (MAX_LINE));
-		portion = strtok(line," \t");
+		original_line = (char*)realloc(original_line, sizeof(char) * (MAX_LINE));
+		
+		
+		portion = strtok(original_line," \t");
 	
 		while(portion != NULL)
-		{
+		{	
 			macroflag = is_in_macro_list(head, portion);
 			if(macroflag != 0)
 			{
@@ -48,6 +48,7 @@ int main_pre_processor(FILE *fptr)
 			}
 			else if(strcmp(portion,mcr))
 			{
+				portion = strtok(NULL," \t");
 				/*Adding the macro to the head of the list*/
 				temp = createMacro(head,macro_counter,portion);
 				++macro_counter;
@@ -58,9 +59,22 @@ int main_pre_processor(FILE *fptr)
 				} 
 				else
 					head = temp;
+				portion = strtok(NULL,"endmcr");
+				strcpy(head->macro,portion);
+			}
+			else
+			{
+				strcat(new_txt,portion);
+				len_of_txt = strlen(new_txt);
+				new_txt[len_of_txt - 1] = ' ';
+				portion = strtok(original_line," \t");
 			}
 		}
+		free(original_line);
 	}
+	/*"Closing" the string.*/
+	new_txt[len_of_txt - 1] = '\0';
+	free(new_txt);
 	return 0;
 }
 
@@ -108,15 +122,15 @@ char *insert_string(char *new_txt, int macroflag, struct Macros *head)
 }
 
 
-struct Macros *createMacro(struct Macros *next, int counter, char *macro) 
+struct Macros *createMacro(struct Macros *next, int counter, char *macro_name) 
 {
 	struct Macros *newMacro = (struct Macros*)malloc(sizeof(Macros));
 	if(newMacro == NULL)
 		return NULL;
 	newMacro->macro_flag_in_list = counter;
-	strcpy(newMacro->macro,macro);
+	strcpy(newMacro->macro_name,macro_name);
     	newMacro->next = next;
+	newMacro->macro = NULL;
    	return newMacro;
 }
-
 
