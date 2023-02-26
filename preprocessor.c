@@ -11,42 +11,38 @@ struct Macros {
 
 int main_pre_processor(FILE *fptr)
 {	
-	int macro_counter,macroflag,size;
+	int macro_counter,macroflag,macro_in_list,size, x;
 
 	size_t len_of_txt;
 
 	char mcr[] = "mcr\0";
+	char endmcr[] = "endmcr\0";
 	char original_line[MAX_LINE];	
 	char *portion, *new_txt;
 
 	struct Macros *head, *temp;
 
-	new_txt = (char*)malloc(sizeof(char));
+	new_txt = (char*)malloc(sizeof(char)*MAX_LINE);
 
 
 	head = NULL;
 	macroflag = 0;
 	macro_counter = 0;
 	len_of_txt = 0;
+	size = 0;
 	
 	while ((fgets(original_line, MAX_LINE, fptr)) != NULL) 
     	{
-		printf("The line is: %s\n", original_line);
-		/*Checking if this line is a part of a macro.*/
-		if(macroflag != 0)
-		{
-			portion = strtok(NULL,"endmcr");
-			strcat(head->macro,portion);
-		}
-		
 		portion = strtok(original_line," \t");
 	
 		while(portion != NULL)
-		{	
-			macroflag = is_in_macro_list(head, portion);
-			if(macroflag != 0)
+		{
+			size += MAX_LINE;
+			macro_in_list = is_in_macro_list(head, portion);
+			if(macro_in_list != 0)
 			{
-				new_txt = insert_string(new_txt,macroflag,head);
+				new_txt = (char*)realloc(new_txt, size + sizeof(char)); 
+				new_txt = insert_string(new_txt,macro_in_list,head);
 				if(new_txt == NULL)
 				{
 					printf("The system could not allocate enough memory for some of your text.\n");
@@ -54,12 +50,22 @@ int main_pre_processor(FILE *fptr)
 				}
 					
 			}
-			
-			else if(strcmp(portion,mcr))
+			/*Checking if this portion a part of a macro.*/
+			else if(macroflag != 0 && strcmp(portion,endmcr) != 0)
 			{
+				len_of_txt = strlen(portion);
+				/*portion[len_of_txt] = ' ';*/
+				for(temp = head;temp->macro_flag_in_list != macro_in_list; temp = temp->next);
+				strcat(temp->macro,portion);		
+			}		
+			/*Checking if this portion is the end of the macro.*/
+			else if(macroflag != 0 && strcmp(portion,endmcr) == 0)
+				macroflag = 0;
+			else if(strcmp(portion,mcr) == 0)
+			{
+				macroflag = 1;
 				portion = strtok(NULL," \t");
 				/*Adding the macro to the head of the list*/
-				printf("Portion is: %s\n", portion);
 				temp = createMacro(head,macro_counter,portion);
 				++macro_counter;
 				if (temp == NULL)
@@ -69,27 +75,29 @@ int main_pre_processor(FILE *fptr)
 				} 
 				else
 					head = temp;
-				portion = strtok(NULL,"endmcr");
-				strcat(head->macro,portion);
-				
 			}
-		
 			else
 			{
-
+				printf("portion is: %s\n", portion);
+				new_txt = (char*)realloc(new_txt, size + sizeof(char)); 
+				printf("SIZE is: %d\n", size);
 				strcat(new_txt,portion);
+				printf("new_txt is: %s\n", new_txt);
 				len_of_txt = strlen(new_txt);
-				new_txt[len_of_txt - 1] = ' ';
-				portion = strtok(original_line," \t");
+				/*"Closing" the string with a space followed by a NULL terminator.*/
+				new_txt[len_of_txt] = ' ';
+				new_txt[len_of_txt + 1] = '\0';
 				
 			}
-			/*"Closing" the line.*/
-			new_txt[len_of_txt - 1] = '\n';
+			portion = strtok(NULL," \t");
 		}
+		/*"Closing" the line.*/
+		/*new_txt[len_of_txt - 1] = '\n';*/
 	}
 	/*"Closing" the string.*/
 	new_txt[len_of_txt - 1] = '\0';
 	free(new_txt);
+	printf("new_txt is: %s", new_txt);
 	return 0;
 }
 
@@ -114,7 +122,6 @@ int is_in_macro_list(struct Macros *head, char portion[])
 
 char *insert_string(char *new_txt, int macroflag, struct Macros *head) 
 {
-	size_t insert_len;
 
 	struct Macros *current = head;
 	while (current != NULL) 
@@ -122,8 +129,6 @@ char *insert_string(char *new_txt, int macroflag, struct Macros *head)
 		
        		if (macroflag == current->macro_flag_in_list)
 		{
-			insert_len = strlen(current->macro);
-			new_txt = (char*)realloc(new_txt, sizeof(char) * (insert_len+1)); /*+1 for NULL terminator.*/
 			if(new_txt == NULL)
 			{
 				printf("The system could not allocate enough memory for some of your text.\n");
@@ -143,8 +148,8 @@ struct Macros *createMacro(struct Macros *next, int counter, char *macro_name)
 	if(newMacro == NULL)
 		return NULL;
 	newMacro->macro_flag_in_list = counter;
-	printf("macro_name is: %s", macro_name);
 	strcpy(newMacro->macro_name,macro_name);
     	newMacro->next = next;
    	return newMacro;
 }
+
