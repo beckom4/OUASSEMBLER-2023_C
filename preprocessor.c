@@ -3,34 +3,41 @@
 /*Defining a linked list that will contain the macros. The list is declared in the h file and defined here in order to keep the encapsulation principle.*/
 struct Macros {
 	int macro_flag_in_list;
-	char *macro, *macro_name;
+	char macro[MAX_LINE];
+	char macro_name[MAX_LINE];
 	struct Macros* next;
 };
 
 
 int main_pre_processor(FILE *fptr)
 {	
-	int macro_counter,macroflag;
+	int macro_counter,macroflag,size;
 
 	size_t len_of_txt;
 
-	char mcr[] = "mcr\0";	
-	char *portion, *new_txt,*original_line;
+	char mcr[] = "mcr\0";
+	char original_line[MAX_LINE];	
+	char *portion, *new_txt;
 
 	struct Macros *head, *temp;
 
 	new_txt = (char*)malloc(sizeof(char));
-	original_line = (char*)malloc(sizeof(char));
+
 
 	head = NULL;
-	
+	macroflag = 0;
 	macro_counter = 0;
 	len_of_txt = 0;
 	
-	while (fgets(original_line, MAX_LINE, fptr)) 
+	while ((fgets(original_line, MAX_LINE, fptr)) != NULL) 
     	{
-		original_line = (char*)realloc(original_line, sizeof(char) * (MAX_LINE));
-		
+		printf("The line is: %s\n", original_line);
+		/*Checking if this line is a part of a macro.*/
+		if(macroflag != 0)
+		{
+			portion = strtok(NULL,"endmcr");
+			strcat(head->macro,portion);
+		}
 		
 		portion = strtok(original_line," \t");
 	
@@ -44,12 +51,15 @@ int main_pre_processor(FILE *fptr)
 				{
 					printf("The system could not allocate enough memory for some of your text.\n");
 					return END_PROGRAM;
-				}	
+				}
+					
 			}
+			
 			else if(strcmp(portion,mcr))
 			{
 				portion = strtok(NULL," \t");
 				/*Adding the macro to the head of the list*/
+				printf("Portion is: %s\n", portion);
 				temp = createMacro(head,macro_counter,portion);
 				++macro_counter;
 				if (temp == NULL)
@@ -60,17 +70,22 @@ int main_pre_processor(FILE *fptr)
 				else
 					head = temp;
 				portion = strtok(NULL,"endmcr");
-				strcpy(head->macro,portion);
+				strcat(head->macro,portion);
+				
 			}
+		
 			else
 			{
+
 				strcat(new_txt,portion);
 				len_of_txt = strlen(new_txt);
 				new_txt[len_of_txt - 1] = ' ';
 				portion = strtok(original_line," \t");
+				
 			}
+			/*"Closing" the line.*/
+			new_txt[len_of_txt - 1] = '\n';
 		}
-		free(original_line);
 	}
 	/*"Closing" the string.*/
 	new_txt[len_of_txt - 1] = '\0';
@@ -88,7 +103,7 @@ int is_in_macro_list(struct Macros *head, char portion[])
 	while (current != NULL) 
 	{
 		++macroflag;
-       		if (strcmp(current-> macro,portion)) 
+       		if (strcmp(current-> macro_name,portion)) 
       			return macroflag;
    		current = current->next;
 	}
@@ -124,13 +139,12 @@ char *insert_string(char *new_txt, int macroflag, struct Macros *head)
 
 struct Macros *createMacro(struct Macros *next, int counter, char *macro_name) 
 {
-	struct Macros *newMacro = (struct Macros*)malloc(sizeof(Macros));
+	struct Macros *newMacro = (struct Macros*)malloc(sizeof(struct Macros));
 	if(newMacro == NULL)
 		return NULL;
 	newMacro->macro_flag_in_list = counter;
+	printf("macro_name is: %s", macro_name);
 	strcpy(newMacro->macro_name,macro_name);
     	newMacro->next = next;
-	newMacro->macro = NULL;
    	return newMacro;
 }
-
