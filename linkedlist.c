@@ -26,12 +26,12 @@ struct node* insert_node_to_end(struct node** tail, void* data,int size)
 	return new_node;
 }
 
-struct node* search_list(struct node *head, void *data)
+struct node* search_list(struct node *head, void *data, int size)
 {
 	struct node *current;
 	/*Looping over the list and comparing the data field of the current node to the one passed as an argument*/
 	for (current = head; current != NULL; current = current -> next)
-		if(current -> data == data)
+		if(memcmp(current->data, data, size) == 0)
 			return current;
 	return NULL;
 }
