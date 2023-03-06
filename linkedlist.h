@@ -5,7 +5,7 @@
 typedef struct node *node;
 
 struct node* insert_node_to_end(struct node** tail, void* data,int size);
-struct node* search_list(struct node *head, void *data);
+struct node* search_list(struct node *head, void *data, int size);
 void destroy_list(struct node *head);
 /*Temporary function*/
 void print_list(struct node* head); 
