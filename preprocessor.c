@@ -202,7 +202,7 @@ int is_command(char *macro_name)
                              "prn\0", "jsr\0", "rts\0", "stop\0"};	
 	int i; 
 
-	for(i = 0; i < 16; i++)
+	for(i = 0; i < MAX_CMD_ARR; i++)
 	{
 		if(strcmp(macro_name,commands[i]) == 0)
 			return 1;
