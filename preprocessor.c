@@ -183,17 +183,6 @@ int produce_file(char *new_txt)
 }
 
 
-/*int find_spaces(char portion[])
-{
-	int i;
-	i = 0;
-	for(i = 0; i < strlen(portion); i++)
-		if(!isspace(portion[i]) || portion[i] == '\n')
-			return 1;
-	return 0;	
-}*/
-
-
 int is_command(char *macro_name)
 {
 	const char commands[][8] = {"mov\0", "cmp\0", "add\0", "sub\0",
