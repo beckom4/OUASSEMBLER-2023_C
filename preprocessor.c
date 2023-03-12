@@ -184,7 +184,7 @@ int produce_file(char *new_txt, char *old_file_name)
 	
    	 if (fptr == NULL) 
 	 { 
-         	printf("Error opening file!\n"); 
+         	printf("Error creating file!\n"); 
         	return END_PROGRAM;
    	 }
     	 fputs(new_txt, fptr); 
