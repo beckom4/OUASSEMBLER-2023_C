@@ -4,7 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#define MAX_LABEL_LENGTH 32
+#define MAX_LABEL_LENGTH 30
 #define MAX_STRING_DEF_LEN 80
 #define MAX_DATA_DEF_LEN 80
 #define MAX_SYNTAX_ERR_LEN 120
@@ -140,3 +140,5 @@ int is_instruction(const char str[]);
 int is_label(const char str[]);
 
 int is_comment(const char str[]);
+
+int check_label(struct sst *res, const char *line);
