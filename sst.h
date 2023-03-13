@@ -3,6 +3,8 @@
 #include <search.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define MAX_LABEL_LENGTH 30
 #define MAX_STRING_DEF_LEN 80
@@ -14,6 +16,7 @@
 #define WORD_SIZE 10
 #define REG_SIZE 2
 #define NUM_OF_SEPERATORS 6
+#define MAX_LINE 80
 
 enum sst_directive_tag {
     sst_tag_dir_entry,
@@ -129,7 +132,7 @@ struct sst sst_get_stt_from_line(const char * line);
 
 /*Function declarations:*/
 
-int is_command(const char str[]);
+int check_command(const char str[], int index);
 
 int is_reg(const char str[]);
 
