@@ -233,10 +233,3 @@ int check_label(struct sst *res, const char *line)
 }
 
 
-int main()
-{
-	char test[] = "MAIN:	inc r1, r2";
-	sst_get_stt_from_line(test);
-	return 0;
-}
-
