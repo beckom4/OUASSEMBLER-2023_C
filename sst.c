@@ -41,9 +41,12 @@ static struct sst_cpu_inst sst_cpu_insts[NUM_OF_CMD] = {
 
 struct sst sst_get_stt_from_line(const char * line) 
 {
-	const char *first_portion, portion;
-	int i, index_of_tok, label_flag;
+	const char *first_portion, *portion;
+	int i, index_of_tok, error_flag, label_flag;
+
 	struct sst res;
+
+	error_flag = 0;
 	
 	if(is_comment(line) == 1)
 		res.syntax_option = sst_comment;
@@ -51,14 +54,19 @@ struct sst sst_get_stt_from_line(const char * line)
 		res.syntax_option = sst_white_space;
 	else
 	{
-		portion = strchr(line, tokens[1]->tok)
-		index_of_tok = (int)(portion - line);
-		for(i = 0; i < index_of_tok; i++)
-			first_portion[i] = line[i];
-		if(is_label(first_portion) == 1)
-			
-		
+		/*Checking for ':', meaning for labels:*/
+		label_flag = check_label(&res, line);
+		if(label_flag == -1)
+			error_flag == 1;
 	}
+	
+
+
+
+
+
+	if(error_flag == 1)
+		res.syntax_option = sst_syntax_error;
    	return res;
 }
 
@@ -152,4 +160,28 @@ int is_label(const char str[])
 		return 1;		
 }
 
+
+int check_label(struct sst *res, const char *line)
+{
+	int i, index_of_tok;
+	char first_portion[MAX_LABEL_LENGTH + 1];
+	char *portion;
+
+	portion = strchr(line, tokens[1].tok);
+	if(portion != NULL)
+		index_of_tok = (int)(portion - line);
+	portion = strchr(portion, tokens[1].tok);
+	/*Checking if there are more ':' in the line, meaning if there's an error.*/
+	if(portion != NULL)
+		return -1;
+	for(i = 0; i < index_of_tok; i++)
+		first_portion[i] = line[i];
+	if(is_label(first_portion) == 1)
+	{
+		strcpy(res->label,first_portion);
+		return 1;
+	}
+	else
+		return 0;		
+}
 
