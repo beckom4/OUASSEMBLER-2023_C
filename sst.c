@@ -39,34 +39,78 @@ static struct sst_cpu_inst sst_cpu_insts[NUM_OF_CMD] = {
 
 struct sst sst_get_stt_from_line(const char * line) 
 {	
-	char *first_portion;
-	int i, index_of_tok, error_flag, label_flag, command_flag;
-	char command;
+	char *token;
+	char portion[MAX_LINE], last_portion[MAX_LINE];
+	int i, j, k, index_of_tok, error_flag, label_flag, command_flag, directive_flag;
+	int *index;
 
 	struct sst res;
 
-	error_flag = 0;
-	
+	i = 0, error_flag = 0, command_flag = -1, directive_flag = -1;
+	index = &i;
+	/*Checking if this is a comment.*/	
 	if(is_comment(line) == 1)
 		res.syntax_option = sst_comment;
+	/*Checking if this is an empty line*/
 	else if(is_empty(line))
 		res.syntax_option = sst_white_space;
+	/*Checking if this is a command/ directive*/
 	else
 	{
 		/*Checking for ':', meaning for labels:*/
 		label_flag = check_label(&res, line);
 		if(label_flag == -1)
-			error_flag == 1;
+			error_flag = 1;
+		*index += label_flag;
+		printf("label_flag is: %d and index is: %d\n", label_flag, *index);
+		/*Making sure that we did not find any errors.*/
 		if(error_flag != 1)
-			command_flag = check_command(line, label_flag);
+			command_flag = check_command(line, &index);
+		/*Checking if the current portion of the line is a command*/
+		if(command_flag != -1)
+			res.syntax_option = sst_instruction;
+		/*Checking if this is a directive*/
+		else if(error_flag != 1)
+			directive_flag = is_directive(line, &index);
+		/*Checking if we found a directive*/
+		if(directive_flag != -1)
+			res.syntax_option = sst_directive;
+		printf("i is: %d\n", *index);
+		j = 0;
+		while(line[*index] != '\0')
+		{
+			printf("char is: %c\t", line[*index]);
+			last_portion[j] = line[*index];
+			j++;
+			++(*index);
+		}
+		last_portion[j] = '\0';
+		printf("last_portion is: %s\n",last_portion);
+			
+		/*Extracting the rest of the text.*/
+		for(j = 0; j < NUM_OF_TOKENS; j++)
+		{
+			token = strchr(last_portion,tokens[j].tok);
+			if(token != NULL)
+			{
+				index_of_tok = (int)(token - last_portion);
+				for(k = 0; k < index_of_tok; k++)
+					portion[k] = last_portion[k];
+				portion[k] = '\0';
+				printf("portion is: %s\n", portion);
+			}
+										
+		}
+			
 		
-				
+						
 	}
 	
 
 	/*TEMPORARY - FOR CHECKS ONLY*/
 	printf("label_flag is: %d\n", label_flag);
 	printf("command_flag is: %d\n", command_flag);
+	printf("directive_flag is: %d\n", directive_flag);
 	/*TEMPORARY - FOR CHECKS ONLY*/
 	
 
@@ -76,48 +120,40 @@ struct sst sst_get_stt_from_line(const char * line)
    	return res;
 }
 
-int check_command(const char str[], int index)
+int check_command(const char str[], int **index)
 {
-   	int left, right, mid,i,j,pars_begin,pars_end;
+	int left, right, mid, j, parse_begin, parse_end,temp;
 	char cmd[MAX_LINE];
-	i = index + 1, j = 0, pars_begin = 0, pars_end = 0;
-	printf("line is: %s\n", str);
-	while(pars_end != 1)
+	j = 0, parse_begin = 0, parse_end = 0, temp = **index;
+
+	while (parse_end != 1) 
 	{
-		if(!isspace(str[i]))	
+    		if (!isspace(str[**index + 1])) 
 		{
-			pars_begin = 1;
-			cmd[j] = str[i];
-			++j;
-		}
-		else if(isspace(str[i]) && pars_begin == 1)
-			pars_end = 1;
-		++i;	
+       			parse_begin = 1;
+        		cmd[j] = str[**index + 1];
+        		++j;
+    		} 
+		else if (isspace(str[**index + 1]) && parse_begin == 1) {
+       			parse_end = 1;
+    	}
+    		++(**index);
 	}
 	cmd[j] = '\0';
-	printf("cmd is: %s\n", cmd);
 	left = 0;
 	right = NUM_OF_CMD - 1;
 	/*Binary search to find the command*/
 	while(left <= right)
     	{
 		mid = (left+ right)/2;
-		printf("flag2\n");
         	if(strcmp(cmd, sst_cpu_insts[mid].inst_name) > 0)
-		{
 			left = mid + 1;
-			printf("flag3\n");
-		}
 		else if(strcmp(cmd, sst_cpu_insts[mid].inst_name) < 0)
-		{
 			right = mid - 1;
-			printf("flag3\n");
-		}
-		else 
-		{	
+		else 	
            		return sst_cpu_insts[mid].i_tag;
-		}
    	}
+	**index = temp;
     	return -1;
 }
 
@@ -165,16 +201,33 @@ int is_comment(const char str[])
 
 }
 
-int is_instruction(const char str[])
+int is_directive(const char str[], int **index)
 {
-	int i;
-	const char instructions[][WORD_SIZE] = {".data",".string",".entry",".extern"};
-
+	int i, j, parse_begin,parse_end,temp;
+	char directive[MAX_LINE];
+	const char directives_arr[][WORD_SIZE] = {".data",".string",".entry",".extern"};
+	j = 0;
+	temp = **index;
+	while (parse_end != 1) 
+	{
+    		if (!isspace(str[**index + 1])) 
+		{
+       			parse_begin = 1;
+        		directive[j] = str[**index + 1];
+        		++j;
+    		} 
+		else if (isspace(str[**index + 1]) && parse_begin == 1)
+       			parse_end = 1;
+    		++(**index);
+	}
+	directive[j] = '\0';
+	printf("directive is: %s\n", directive);
 	for(i = 0; i < NUM_OF_INSTRUCTIONS; i++)
 	{
-		if(strcmp(str,instructions[i]))
+		if(strcmp(directive,directives_arr[i]) == 0)
 			return i;
 	}
+	**index = temp;
 	return -1;
 }
 
@@ -196,7 +249,12 @@ int check_label(struct sst *res, const char *line)
 	char first_portion[MAX_LABEL_LENGTH + 1];
 	char *token;
 	char *final_portion = (char*)malloc(sizeof(char) * MAX_LINE);
-
+	/*Making sure that the system managed to allocate enough memory for first_portion*/
+	if(first_portion == NULL)
+	{
+		printf("The system was not able to allocate enough memory for some of your text.\n");
+		exit(1);
+	}
 	token = strchr(line, tokens[1].tok);
 	if(token != NULL)
 		index_of_tok = (int)(token - line);
@@ -206,7 +264,6 @@ int check_label(struct sst *res, const char *line)
        	 	token = strchr(final_portion, tokens[1].tok);
 	else
         	token = NULL;
-	printf("final portion is: %s\n", final_portion);
 	/*Checking if there are more ':' in the line, meaning if there's an error.*/
 	if(token != NULL || index_of_tok == 0)
 	{
@@ -233,3 +290,9 @@ int check_label(struct sst *res, const char *line)
 }
 
 
+int main()
+{
+	char test[] = "MAIN:	mov r1, r3";
+	sst_get_stt_from_line(test);
+	return 0;
+}
