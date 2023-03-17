@@ -1,15 +1,10 @@
 /*This module analyzes the text */
 
-#include <search.h>
-#include <string.h>
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 #define MAX_LABEL_LENGTH 30
 #define MAX_STRING_DEF_LEN 80
 #define MAX_DATA_DEF_LEN 80
 #define MAX_SYNTAX_ERR_LEN 120
+#define MAX_WARNING 40
 #define NUM_OF_CMD 16
 #define NUM_OF_REGS 8
 #define NUM_OF_INSTRUCTIONS 4
@@ -17,12 +12,14 @@
 #define REG_SIZE 2
 #define NUM_OF_SEPERATORS 6
 #define MAX_LINE 80
+#define NUM_OF_TOKENS 5
+#define DEC 10
 
 enum sst_directive_tag {
-    sst_tag_dir_entry,
-    sst_tag_dir_extern,
+    sst_tag_dir_data,
     sst_tag_dir_string,
-    sst_tag_dir_data
+    sst_tag_dir_entry,
+    sst_tag_dir_extern
 };
 /**
  * @param set1, 2 operands;
@@ -77,14 +74,16 @@ struct sst {
         struct {
             enum sst_directive_tag dir_tag;
             union {
-                char string[MAX_STRING_DEF_LEN + 1];
-
-                struct  {
-                    char data_arr[MAX_DATA_DEF_LEN];
+		struct  {
+                    long int data_arr[MAX_DATA_DEF_LEN];
                     char actual_data_size;
                 }data_array;
 
-                char label[MAX_LABEL_LENGTH + 1];
+                char string[MAX_STRING_DEF_LEN + 1];
+		struct  {
+		    char warning[MAX_WARNING + 1];
+                    char label[MAX_LABEL_LENGTH + 1];
+		}label_array;
             }dir;
         }syntax_directive;
         struct {
@@ -121,27 +120,4 @@ struct sst {
     }asm_directive_and_cpu_instruction;
 };
 
-/**
- * creates a SST from a line.
- * 
- * @param line  the line.
- * @return struct sst the sst.
- */
-struct sst sst_get_stt_from_line(const char * line);
 
-
-/*Function declarations:*/
-
-int check_command(const char str[], int index);
-
-int is_reg(const char str[]);
-
-int is_empty(const char str[]);
-
-int is_instruction(const char str[]);
-
-int is_label(const char str[]);
-
-int is_comment(const char str[]);
-
-int check_label(struct sst *res, const char *line);
