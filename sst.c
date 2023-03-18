@@ -12,6 +12,7 @@ extern int directive_data_errors(char str[], struct sst *res);
 extern int directive_string_errors(char str[], struct sst *res);
 extern int directive_entext_errors(char str[], struct sst *res);
 extern int label_errors(char str[], struct sst *res);
+extern int no_operands_errors(char str[], struct sst *res);
 
 
 
@@ -69,10 +70,11 @@ int is_comment(const char str[]);
  * 
  * @param str - the portion to be checked.
 	  index - a pointer to a pointer to the address of the beginning of the portion.
+	  struct sst - the sst of the line.
  * @return i - A number 0-3 that represents the tag of the directive.
 	   -1 if it's not a valid directive.
  */
-int check_directive(const char str[], int **index);
+int check_directive(const char str[], int **index, struct sst *res);
 
 /**
  * Determines if a the current portion is a valid label.
@@ -103,7 +105,17 @@ int handle_directive(int directive_flag, char last_portion[], struct sst *res, i
 	  num_of_operands - the current number of operands that the function handled.
  * @return 0
  */
-int handle_command(int command_flag, char last_portion[], struct sst *res, int num_of_operands);
+int handle_command(int command_flag, char last_portion[], struct sst *res, int num_of_operands, char *token);
+
+/**
+ * Determines how many operands are expected per the set definition in the heeader file.
+ * 
+ * @param command_flag - the tag of the directive.
+ * @return SET1 for 2 operands
+	   SET2 for 1 operand
+	   SET3 for 0 operands
+ */
+int determine_set(int command_flag);
 
 struct sst_token {
 	const char tok;
@@ -165,29 +177,43 @@ struct sst sst_get_stt_from_line(const char * line)
 	{
 		/*Checking for ':', meaning for labels:*/
 		label_flag = check_label(&res, line);
-		if(label_flag == -2)
+		if(label_flag == FOUND_ERROR)
 			error_flag = 1;
 		else if(label_flag != -1)
 			*index += label_flag + 1;
 		if(error_flag != 1)
+		{
 			command_flag = check_command(line, &index);
+			printf("flag\n");
+		}
 		/*Checking if the current portion of the line is a command or not.*/
 		if(command_flag != -1)
 			res.syntax_option = sst_instruction;
 		/*Checking if this is a directive*/
 		else if(error_flag != 1)
-			directive_flag = check_directive(line, &index);			
-		j = 0;
-		while(line[*index] != '\0')
+			directive_flag = check_directive(line, &index, &res);
+		/*Checking if this is neither a command nor a directive*/
+		if(command_flag == -1 && directive_flag == -1)
 		{
-			last_portion[j] = line[*index];
-			j++;
-			++(*index);
+			error_flag = 1;
+			res.syntax_option = sst_syntax_error;
+			strcpy(res.syntax_error_buffer,"The instruction is neither a command nor a directive.");
 		}
-		last_portion[j] = '\0';		
-		/****/
-		/*A CALL FOR A FUNCTION THAT CHECKS ERROR WILL COME HERE.*/
-		if(directive_flag != -1)
+		/*Checking if the directive has no operands*/
+		if(directive_flag == FOUND_ERROR)
+			error_flag = 1;
+		if(error_flag == 0)
+		{
+			j = 0;
+			while(line[*index] != '\0')
+			{
+				last_portion[j] = line[*index];
+				j++;
+				++(*index);
+			}
+			last_portion[j] = '\0';	
+		}	
+		if(directive_flag != -1 && error_flag == 0)
 		{
 			if(directive_flag == 0)
 			{
@@ -200,11 +226,7 @@ struct sst sst_get_stt_from_line(const char * line)
 				}
 			}
 			else if(directive_flag == 1)
-			{
 				error_flag = directive_string_errors(last_portion, &res);
-				if(error_flag == 1)
-					printf("%s\n",res.syntax_error_buffer);
-			}
 			/*Checking if the directive is .extern and the user defined a label anyway.*/
 			else if(directive_flag == 2 && label_flag != -1)
 			{
@@ -219,6 +241,19 @@ struct sst sst_get_stt_from_line(const char * line)
 				printf("warning is: %s\n", res.asm_directive_and_cpu_instruction.syntax_directive.dir.label_array.warning);
 			}
 		}
+		/*Handling the command.*/
+		if(error_flag == 0 && command_flag != -1)
+		{
+			/*Checking that there is at least one white space between the command and the operands.*/
+			if(!isspace(last_portion[0]) && command_flag != sst_tag_cpu_i_rts && command_flag != sst_tag_cpu_i_stop)
+			{
+				res.syntax_option = sst_syntax_error;
+				strcpy(res.syntax_error_buffer,"At least one space or tab is required after command.");
+				error_flag = 1;
+			}
+			if(handle_command(command_flag, last_portion, &res, 0, NULL) == FOUND_ERROR)
+				error_flag = 1;
+		}
 			
 		
 						
@@ -228,6 +263,8 @@ struct sst sst_get_stt_from_line(const char * line)
 	printf("label_flag is: %d\n", label_flag);
 	printf("command_flag is: %d\n", command_flag);
 	printf("directive_flag is: %d\n", directive_flag);
+	if(error_flag == 1)
+		printf("error is: %s\n",res.syntax_error_buffer);
 	/*TEMPORARY - FOR CHECKS ONLY*/
 	
 
@@ -242,21 +279,25 @@ int check_command(const char str[], int **index)
 	int left, right, mid, j, parse_begin, parse_end,temp;
 	char cmd[MAX_LINE];
 	j = 0, parse_begin = 0, parse_end = 0, temp = **index;
-
 	while (parse_end != 1) 
 	{
-    		if (!isspace(str[**index + 1])) 
+    		if (!isspace(str[**index])) 
 		{
        			parse_begin = 1;
-        		cmd[j] = str[**index + 1];
+        		cmd[j] = str[**index];
         		++j;
     		} 
-		else if (isspace(str[**index + 1]) && parse_begin == 1) {
+		if (str[**index] == '\0' && parse_begin == 1) 
        			parse_end = 1;
-    	}
-    		++(**index);
+ 		if(isspace(str[**index]) && parse_begin == 1)
+		{
+			cmd[j] = '\0';
+			parse_end = 1;
+		}
+		if(str[**index] != '\0')
+    			++(**index);
 	}
-	cmd[j] = '\0';
+	printf("cmd is: %s\n", cmd);
 	left = 0;
 	right = NUM_OF_CMD - 1;
 	/*Binary search to find the command*/
@@ -318,7 +359,7 @@ int is_comment(const char str[])
 
 }
 
-int check_directive(const char str[], int **index)
+int check_directive(const char str[], int **index, struct sst *res)
 {
 	int i, j, parse_begin,parse_end,temp;
 	char directive[MAX_LINE];
@@ -334,11 +375,20 @@ int check_directive(const char str[], int **index)
         		directive[j] = str[**index];
         		++j;
     		} 
-		else if (isspace(str[**index]) && parse_begin == 1)
-       			parse_end = 1;
-    		++(**index);
+		if (str[**index] == '\0' && parse_begin == 1)
+		{ 
+       			res->syntax_option = sst_syntax_error;
+			strcpy(res->syntax_error_buffer,"No operands after directive.");
+			return FOUND_ERROR;
+		}
+ 		if(isspace(str[**index]) && parse_begin == 1)
+		{
+			directive[j] = '\0';
+			parse_end = 1;
+		}
+		if(str[**index] != '\0')
+    			++(**index);
 	}
-	directive[j] = '\0';
 	printf("directive is: %s\n", directive);
 	for(i = 0; i < NUM_OF_INSTRUCTIONS; i++)
 	{
@@ -372,7 +422,7 @@ int check_label(struct sst *res, const char *line)
 			return index_of_tok;
 		}
 		else
-			return -2;
+			return FOUND_ERROR;
 		
 	}		
 }
@@ -475,10 +525,98 @@ int handle_directive(int directive_flag, char last_portion[], struct sst *res, i
 }
 
 
+int handle_command(int command_flag, char last_portion[], struct sst *res, int num_of_operands, char *token)
+{
+	
+	int i, index_of_tok, operand;
+	char current_portion[MAX_LINE], sub_str[MAX_LINE];
+	
+	res->syntax_option = sst_instruction;
+
+	printf("last portion is: %s\n", last_portion);
+	res->asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag = command_flag;
+	/*Checking if we are only beginning our check.*/
+	if(token == NULL && num_of_operands == 0)
+	{
+		/*Checking for '('*/
+		token = strchr(last_portion, tokens[2].tok);
+		if(token != NULL)
+		{
+			index_of_tok = (int)(token - last_portion);
+			for(i = 0; i < index_of_tok; i++)
+				current_portion[i] = last_portion[i];
+			/*Checking if there characters before '('*/
+			if(!is_empty(current_portion))
+			{
+				res->syntax_option = sst_syntax_error;
+				strcpy(res->syntax_error_buffer,"illegal characters before '('.");
+				return FOUND_ERROR;	
+			}
+			else
+			{
+				strcpy(sub_str,&last_portion[index_of_tok + 1]);
+				return handle_command(command_flag, current_portion, res, 0, token);
+			}
+		}
+		/*Checking for ','*/
+		else
+		{
+			token = strchr(last_portion, tokens[0].tok);
+			if(token != NULL)
+			{
+				index_of_tok = (int)(token - last_portion);
+				for(i = 0; i < index_of_tok; i++)
+					current_portion[i] = last_portion[i];
+				operand = check_reg(current_portion);
+				if(operand != -1)
+				{
+					switch(determine_set(command_flag))
+					{
+						case SET1:
+							res-> asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.ops_tags[0] = 								sst_tag_op_register;
+							res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.operands[0].reg = 								operand;
+							break;	
+						case SET2:
+							res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.ops_tag = 								sst_tag_op_register;
+							res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.reg = operand;
+							break;	
+						case SET3:
+							res->syntax_option = sst_syntax_error;
+							strcpy(res->syntax_error_buffer,"register after stop/ rts is not allowed.");
+							return FOUND_ERROR;
+					}
+						
+				}
+				else
+				{
+					strcpy(sub_str,&last_portion[index_of_tok + 1]);
+					return handle_command(command_flag, current_portion, res, 0, token);
+				}
+			}			
+		}
+	}
+	return 0;
+}
+
+
+int determine_set(int command_flag)
+{
+	if(command_flag == sst_tag_cpu_i_rts || command_flag == sst_tag_cpu_i_stop)
+			return SET3;					
+	else if(command_flag == sst_tag_cpu_i_not || command_flag == sst_tag_cpu_i_clr || sst_tag_cpu_i_inc ||
+		sst_tag_cpu_i_dec || sst_tag_cpu_i_jmp || sst_tag_cpu_i_bne || sst_tag_cpu_i_red ||
+		sst_tag_cpu_i_prn || sst_tag_cpu_i_jsr)
+			return SET2;
+	else
+		return SET1;
+
+
+}
+
 /*TEMPORARY - FOR TESTING ONLY*/
 int main()
 {
-	char test[] = "LOOP: .string \"This is the way\"";
+	char test[] = ".string \"This is the way\"";
 	sst_get_stt_from_line(test);
 	return 0;
 }
