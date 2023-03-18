@@ -590,7 +590,7 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 				else
 				{
 					strcpy(sub_str,&last_portion[index_of_tok + 1]);
-					return handle_command(command_flag, current_portion, res, 0, token);
+					return handle_command(command_flag, current_portion, res, 1 token);
 				}
 			}			
 		}
