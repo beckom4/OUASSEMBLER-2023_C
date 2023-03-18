@@ -105,7 +105,7 @@ int handle_directive(int directive_flag, char last_portion[], struct sst *res, i
 	  num_of_operands - the current number of operands that the function handled.
  * @return 0
  */
-int handle_command(int command_flag, char last_portion[], struct sst *res, int num_of_operands, char *token);
+int handle_command(int command_flag, char last_portion[], struct sst *res, int num_of_operands);
 
 /**
  * Determines how many operands are expected per the set definition in the heeader file.
@@ -117,16 +117,25 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
  */
 int determine_set(int command_flag);
 
+/**
+ * Determines if the string is a number or not.
+ * 
+ * @param str - the string to be checked.
+ * @return 1 if the string is a valid integer.
+	   0 if it's not. 
+ */
+int is_immediate(char str[]);
+
 struct sst_token {
 	const char tok;
 	const char * tok_description;
 };
 
 static struct sst_token tokens[NUM_OF_SEPERATORS] = {
-    	{',',"seperator"},
-   	{':',"end of label seperator"},
-   	{'(',"open brackets"},
+    	{'(',"open brackets"},
+	{',',"seperator"},
     	{')',"close brackets"},
+	{':',"end of label seperator"},
 	{'"',"close brackets"}
 };
 
@@ -182,10 +191,7 @@ struct sst sst_get_stt_from_line(const char * line)
 		else if(label_flag != -1)
 			*index += label_flag + 1;
 		if(error_flag != 1)
-		{
 			command_flag = check_command(line, &index);
-			printf("flag\n");
-		}
 		/*Checking if the current portion of the line is a command or not.*/
 		if(command_flag != -1)
 			res.syntax_option = sst_instruction;
@@ -197,7 +203,7 @@ struct sst sst_get_stt_from_line(const char * line)
 		{
 			error_flag = 1;
 			res.syntax_option = sst_syntax_error;
-			strcpy(res.syntax_error_buffer,"The instruction is neither a command nor a directive.");
+			strcpy(res.syntax_error_buffer,"Illegal command/ directive.");
 		}
 		/*Checking if the directive has no operands*/
 		if(directive_flag == FOUND_ERROR)
@@ -217,7 +223,7 @@ struct sst sst_get_stt_from_line(const char * line)
 		{
 			if(directive_flag == 0)
 			{
-				token = strchr(last_portion, tokens[0].tok);
+				token = strchr(last_portion, tokens[1].tok);
 				if(token == NULL)
 				{
 					error_flag = 1;
@@ -243,20 +249,8 @@ struct sst sst_get_stt_from_line(const char * line)
 		}
 		/*Handling the command.*/
 		if(error_flag == 0 && command_flag != -1)
-		{
-			/*Checking that there is at least one white space between the command and the operands.*/
-			if(!isspace(last_portion[0]) && command_flag != sst_tag_cpu_i_rts && command_flag != sst_tag_cpu_i_stop)
-			{
-				res.syntax_option = sst_syntax_error;
-				strcpy(res.syntax_error_buffer,"At least one space or tab is required after command.");
-				error_flag = 1;
-			}
-			if(handle_command(command_flag, last_portion, &res, 0, NULL) == FOUND_ERROR)
-				error_flag = 1;
-		}
-			
-		
-						
+			if(handle_command(command_flag, last_portion, &res, 0) == FOUND_ERROR)
+				error_flag = 1;						
 	}
 
 	/*TEMPORARY - FOR CHECKS ONLY*/
@@ -318,16 +312,31 @@ int check_command(const char str[], int **index)
 
 int check_reg(const char str[])
 {
-	int i;
-	const char regs[][REG_SIZE] = {"r0","r1","r2","r3","r4",
-				"r5","r6","r7"};
-
-	for(i = 0; i < NUM_OF_REGS; i++)
+	
+	int i, j, word_begin, word_end, reg;
+	reg = -1;
+	word_begin = 0, word_end = 0;
+	printf("str is %s\n", str);
+	for(i = 0; i < strlen(str); i++)
 	{
-		if(strcmp(str,regs[i]))
-			return i;
+		if(word_end == 1 && !isspace(str[i]))
+			return -1;
+		if(word_begin == 1)
+		{
+			for(j = 0; j < NUM_OF_REGS; j++)
+			{
+				if(str[i] -'0' == j)
+					reg = str[i] - '0';
+				word_end = 1;
+			}
+			
+		}
+		if(isspace(str[i]) && word_begin == 0)
+			continue;
+		if(word_begin == 0 && str[i] == 'r')
+			word_begin = 1;		
 	}
-	return -1;
+	return reg;
 }
 
 
@@ -406,7 +415,7 @@ int check_label(struct sst *res, const char *line)
 	char first_portion[MAX_LABEL_LENGTH + 1];
 	char *token;
 
-	token = strchr(line, tokens[1].tok);
+	token = strchr(line, tokens[3].tok);
 	if(token == NULL)
 		return -1;
 	else
@@ -441,7 +450,7 @@ int handle_directive(int directive_flag, char last_portion[], struct sst *res, i
 	if (directive_flag == 0)
 	{
 		res->asm_directive_and_cpu_instruction.syntax_directive.dir_tag = sst_tag_dir_data;
-		token = strchr(last_portion, tokens[0].tok);
+		token = strchr(last_portion, tokens[1].tok);
 		if(token == NULL)
 		{
 			strcpy(parameter, last_portion);
@@ -525,76 +534,406 @@ int handle_directive(int directive_flag, char last_portion[], struct sst *res, i
 }
 
 
-int handle_command(int command_flag, char last_portion[], struct sst *res, int num_of_operands, char *token)
+int handle_command(int command_flag, char last_portion[], struct sst *res, int num_of_operands)
 {
 	
-	int i, index_of_tok, operand;
-	char current_portion[MAX_LINE], sub_str[MAX_LINE];
-	
+	int i, index_of_tok, open_bracket, close_bracket;
+	long int operand;
+	char current_portion[MAX_LINE], sub_str_temp[MAX_LINE];
+	char *token;
+	char t;
+
+	open_bracket = 0, close_bracket = 0;	
+	token = &t;
 	res->syntax_option = sst_instruction;
 
 	printf("last portion is: %s\n", last_portion);
 	res->asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag = command_flag;
-	/*Checking if we are only beginning our check.*/
-	if(token == NULL && num_of_operands == 0)
+
+	while(token != NULL)
 	{
-		/*Checking for '('*/
-		token = strchr(last_portion, tokens[2].tok);
-		if(token != NULL)
+		memset(current_portion, '\0', MAX_LINE);
+		for(i = 0; i < NUM_OF_TOKENS; i++)
 		{
-			index_of_tok = (int)(token - last_portion);
-			for(i = 0; i < index_of_tok; i++)
-				current_portion[i] = last_portion[i];
-			/*Checking if there characters before '('*/
-			if(!is_empty(current_portion))
-			{
-				res->syntax_option = sst_syntax_error;
-				strcpy(res->syntax_error_buffer,"illegal characters before '('.");
-				return FOUND_ERROR;	
-			}
-			else
-			{
-				strcpy(sub_str,&last_portion[index_of_tok + 1]);
-				return handle_command(command_flag, current_portion, res, 0, token);
-			}
-		}
-		/*Checking for ','*/
-		else
-		{
-			token = strchr(last_portion, tokens[0].tok);
+			token = strchr(last_portion, tokens[i].tok);
 			if(token != NULL)
 			{
 				index_of_tok = (int)(token - last_portion);
+				break;
+			}
+		}
+		if(token == NULL)
+			token = &t;
+		switch(*token)
+		{
+			case '(':
+				++open_bracket;
+				for(i = 0; i < index_of_tok; i++)
+					current_portion[i] = last_portion[i];
+				/*Checking if there characters before '('*/
+				/***/
+					/*IMPORTANT - the if statement below is missing a condition. 
+					We need to add the condition - if current_portion is a label that's ok*/
+				/***/
+				if(current_portion[0] != '\0' && !is_empty(current_portion))
+				{
+					res->syntax_option = sst_syntax_error;
+					strcpy(res->syntax_error_buffer,"illegal characters before '('.");
+					return FOUND_ERROR;	
+				}
+				else
+				{
+					strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
+					strcpy(last_portion, sub_str_temp);
+					printf("last_portion is now: %s\n", last_portion);
+				}
+				break;
+			case ',':
 				for(i = 0; i < index_of_tok; i++)
 					current_portion[i] = last_portion[i];
 				operand = check_reg(current_portion);
+				/*Checking if the operand is a register.*/
 				if(operand != -1)
 				{
 					switch(determine_set(command_flag))
 					{
 						case SET1:
-							res-> asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.ops_tags[0] = 								sst_tag_op_register;
-							res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.operands[0].reg = 								operand;
+							/*Making sure that the command is not lea and the operand is not so*/
+							if(command_flag == LEA && num_of_operands == 0)
+							{
+								res->syntax_option = sst_syntax_error;
+								strcpy(res->syntax_error_buffer,"illegal source operand for lea.");
+								return FOUND_ERROR;
+							}
+							if(open_bracket != 0)
+							{
+								res->syntax_option = sst_syntax_error;
+								strcpy(res->syntax_error_buffer,"illegal bracket/s.");
+								return FOUND_ERROR;
+							}
+							res-> asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.
+							ops_tags[num_of_operands] = sst_tag_op_register;
+							res-> asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.
+							set_2_operands.operands[num_of_operands].reg = operand;
+							++num_of_operands;
+							strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
+							strcpy(last_portion, sub_str_temp);
+							printf("last portion 2 is: %s\n", last_portion);
 							break;	
 						case SET2:
 							res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.ops_tag = 								sst_tag_op_register;
-							res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.reg = operand;
+							res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.reg = 								operand;
+							++num_of_operands;
+							strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
+							strcpy(last_portion, sub_str_temp);
+							printf("last portion 2 is: %s\n", last_portion);
 							break;	
 						case SET3:
 							res->syntax_option = sst_syntax_error;
 							strcpy(res->syntax_error_buffer,"register after stop/ rts is not allowed.");
 							return FOUND_ERROR;
-					}
-						
+					}		
 				}
+				/*Checking if the operand is a valid integer*/
+				else if(is_immediate(current_portion))
+				{
+					operand = strtol(current_portion, &token, DEC);
+					switch(determine_set(command_flag))
+					{
+						case SET1:
+						/*Making sure that the command is not lea and the operand is not so*/
+						if(command_flag == LEA && num_of_operands == 0)
+							{
+								res->syntax_option = sst_syntax_error;
+								strcpy(res->syntax_error_buffer,"illegal source operand for lea.");
+								return FOUND_ERROR;
+							}
+							res-> asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.
+							ops_tags[num_of_operands] = sst_tag_op_c_number;
+							res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.
+							operands[num_of_operands].reg = operand;
+							++num_of_operands;
+							strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
+							strcpy(last_portion, sub_str_temp);
+							printf("last portion 2 is: %s\n", last_portion);
+							break;	
+						case SET2:
+							/*Making sure that the operand is not an illegal dest operand*/
+							if(determine_set(command_flag) == SET2 && command_flag != PRN && num_of_operands == 1)
+							{
+								res->syntax_option = sst_syntax_error;
+								strcpy(res->syntax_error_buffer,"illegal operand.");
+								return FOUND_ERROR;
+							}
+							/*IMPORTANT - 
+							This is just a base for what we need to do for set2 -
+							If the command is jmp, bne, jsr we need to extract the label's name and only then continue.
+							For these commands, no spaces are allowed between the operands.
+							The rest of the commands from set1 SHOULD NOT have brackets at all.*/
+							res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.ops_tag = 								sst_tag_op_c_number;
+							res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.
+							operands.c_number = operand;
+							++num_of_operands;
+							strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
+							strcpy(last_portion, sub_str_temp);
+							printf("last portion 2 is: %s\n", last_portion);
+							break;	
+						case SET3:
+							res->syntax_option = sst_syntax_error;
+							strcpy(res->syntax_error_buffer,"operand after stop/ rts is not allowed.");
+							return FOUND_ERROR;
+					}
+				}
+				/***/
+				/*this is the part where we need to check if the operand is a label. This part will be completed after the symbol table is 					ready.*/
+				/***/
+				/*The opperaand is not immediate, register or label*/
 				else
 				{
-					strcpy(sub_str,&last_portion[index_of_tok + 1]);
-					return handle_command(command_flag, current_portion, res, 1 token);
+					res->syntax_option = sst_syntax_error;
+					strcpy(res->syntax_error_buffer,"illegal operand.");
+					return FOUND_ERROR;
 				}
-			}			
-		}
-	}
+				break;
+			case ')':
+				if(open_bracket - close_bracket != 1)
+				{
+					res->syntax_option = sst_syntax_error;
+					strcpy(res->syntax_error_buffer,"close bracket with no open bracket.");
+					return FOUND_ERROR;
+				}
+				++close_bracket;
+				for(i = 0; i < index_of_tok; i++)
+					current_portion[i] = last_portion[i];
+				operand = check_reg(current_portion);
+				/*Checking if the operand is a register.*/
+				if(operand != -1)
+				{
+					switch(determine_set(command_flag))
+					{
+						case SET1:
+							/*Making sure that the command is not lea and the operand is not so*/
+							if(command_flag == LEA && num_of_operands == 0)
+							{
+								res->syntax_option = sst_syntax_error;
+								strcpy(res->syntax_error_buffer,"illegal source operand for lea.");
+								return FOUND_ERROR;
+							}
+							res-> asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.
+							ops_tags[num_of_operands] = sst_tag_op_register;
+							res-> asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.
+							set_2_operands.operands[num_of_operands].reg = operand;
+							++num_of_operands;
+							strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
+							strcpy(last_portion, sub_str_temp);
+							printf("last portion 2 is: %s\n", last_portion);
+							break;	
+						case SET2:
+							/*IMPORTANT - 
+							This is just a base for what we need to do for set2 -
+							If the command is jmp, bne, jsr we need to extract the label's name and only then continue.
+							For these commands, no spaces are allowed between the operands.
+							The rest of the commands from set1 SHOULD NOT have brackets at all.*/
+							res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.ops_tag = 								sst_tag_op_register;
+							res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.reg = 								operand;
+							++num_of_operands;
+							
+							strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
+							strcpy(last_portion, sub_str_temp);
+							printf("last portion 2 is: %s\n", last_portion);
+							break;	
+						case SET3:
+							res->syntax_option = sst_syntax_error;
+							strcpy(res->syntax_error_buffer,"register after stop/ rts is not allowed.");
+							return FOUND_ERROR;
+					}		
+				}
+				/*Checking if the operand is a valid integer*/
+				else if(is_immediate(current_portion))
+				{
+					operand = strtol(current_portion, &token, DEC);
+					switch(determine_set(command_flag))
+					{
+						case SET1:
+						/*Making sure that the command is not lea and the operand is not so*/
+						if(command_flag == LEA && num_of_operands == 0)
+							{
+								res->syntax_option = sst_syntax_error;
+								strcpy(res->syntax_error_buffer,"illegal source operand for lea.");
+								return FOUND_ERROR;
+							}
+							/*Making sure that the operand is not an illegal dest operand*/
+							if(determine_set(command_flag) == SET1 && command_flag != CMP && num_of_operands == 1)
+							{
+								res->syntax_option = sst_syntax_error;
+								strcpy(res->syntax_error_buffer,"illegal operand.");
+								return FOUND_ERROR;
+							}
+							res-> asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.
+							ops_tags[num_of_operands] = sst_tag_op_c_number;
+							res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.
+							operands[num_of_operands].reg = operand;
+							++num_of_operands;
+							strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
+							strcpy(last_portion, sub_str_temp);
+							printf("last portion 2 is: %s\n", last_portion);
+							break;	
+						case SET2:
+							/*Making sure that the operand is not an illegal dest operand*/
+							if(determine_set(command_flag) == SET2 && command_flag != PRN && num_of_operands == 1)
+							{
+								res->syntax_option = sst_syntax_error;
+								strcpy(res->syntax_error_buffer,"illegal operand.");
+								return FOUND_ERROR;
+							}
+							res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.ops_tag = 								sst_tag_op_c_number;
+							res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.
+							operands.c_number = operand;
+							++num_of_operands;
+							strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
+							strcpy(last_portion, sub_str_temp);
+							printf("last portion 2 is: %s\n", last_portion);
+							break;	
+						case SET3:
+							res->syntax_option = sst_syntax_error;
+							strcpy(res->syntax_error_buffer,"operand after stop/ rts is not allowed.");
+							return FOUND_ERROR;
+					}
+				}
+				/***/
+				/*this is the part where we need to check if the operand is a label. This part will be completed after the symbol table is 					ready.*/
+				/***/
+				/*The opperaand is not immediate, register or label*/
+				else
+				{
+					res->syntax_option = sst_syntax_error;
+					strcpy(res->syntax_error_buffer,"illegal operand.");
+					return FOUND_ERROR;
+				}
+				break;
+			case ':':
+				res->syntax_option = sst_syntax_error;
+				strcpy(res->syntax_error_buffer,"illegal character.");
+				return FOUND_ERROR;
+			case'"':
+				res->syntax_option = sst_syntax_error;
+				strcpy(res->syntax_error_buffer,"illegal character.");
+				return FOUND_ERROR;
+			/*None of the tokens were found.*/	
+			default:
+        	 		switch(determine_set(command_flag))
+				{
+						case SET1:
+							if(num_of_operands == 0)
+							{
+								res->syntax_option = sst_syntax_error;
+								strcpy(res->syntax_error_buffer,"MIssing comma/s");
+								return FOUND_ERROR;
+							}
+							else if(num_of_operands == 1)
+							{
+								operand = check_reg(last_portion);
+								/*Checking if the 2nd operand is a register.*/
+								if(operand != -1)
+								{
+									printf("last_portion now is: %s\n",last_portion);
+									res-> asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.
+									ops_tags[num_of_operands] = sst_tag_op_c_number;
+									res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.
+									operands[num_of_operands].reg = operand;
+									++num_of_operands;
+								}
+								else if(is_immediate(last_portion))
+								{
+									/*Making sure that the operand is not an illegal dest operand*/
+									if(command_flag != CMP && num_of_operands == 1)
+									{
+										res->syntax_option = sst_syntax_error;
+										strcpy(res->syntax_error_buffer,"illegal operand.");
+										return FOUND_ERROR;
+									}
+									res-> asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.
+									ops_tags[num_of_operands] = sst_tag_op_c_number;
+									res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.
+									operands[num_of_operands].reg = operand;
+									++num_of_operands;
+								}	
+								
+							}
+							break;
+						case SET2:
+							/*Checking if jmp/ jsr/ bne are missing essential characters.*/
+							if(num_of_operands == 0 && (command_flag == BNE || command_flag == JSR || command_flag == JMP))
+							{
+								res->syntax_option = sst_syntax_error;
+								strcpy(res->syntax_error_buffer,"Missing characters for jmp/ jsr/ bne.");
+								return FOUND_ERROR;
+							}
+							/*Extracting the operand for the rest of the set2 commands.*/
+							else if(num_of_operands == 0)
+							{
+								operand = check_reg(current_portion);
+								/*Operand is a register.*/
+								if(operand != -1)
+								{
+									res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.
+									ops_tag = sst_tag_op_register;
+									res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.
+									reg = operand;
+									++num_of_operands;
+									strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
+									strcpy(last_portion, sub_str_temp);
+									printf("last portion 2 is: %s\n", last_portion);	
+								}
+								/*Checking if the operand is a valid integer*/
+								else if(is_immediate(current_portion))
+								{
+									/*From set2, only prn can have immediate as an operand.*/
+									if(command_flag == PRN)
+									{
+										res->asm_directive_and_cpu_instruction.instruction_syntax.
+										inst_operands.set_1_operands.ops_tag = sst_tag_op_c_number;
+										res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.
+										operands.c_number = operand;
+										++num_of_operands;
+										strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
+										strcpy(last_portion, sub_str_temp);
+										printf("last portion 2 is: %s\n", last_portion);
+									}
+									else
+									{
+										res->syntax_option = sst_syntax_error;
+										strcpy(res->syntax_error_buffer,"Illegal operand/s");
+										return FOUND_ERROR;
+									}
+								}
+								/***/
+								/*this is the part where we need to check if the operand is a label. This part will be 									completed after the symbol table is ready.*/
+								/***/
+								/*The opperaand is not immediate, register or label*/
+								else
+								{
+									res->syntax_option = sst_syntax_error;
+									strcpy(res->syntax_error_buffer,"illegal operand.");
+									return FOUND_ERROR;
+								}
+							}
+							break;
+						case SET3:
+							if(!is_empty(last_portion))
+							{
+								res->syntax_option = sst_syntax_error;
+								strcpy(res->syntax_error_buffer,"illegal characters after stop/ rts.");
+								return FOUND_ERROR;
+							}
+							else
+								break;	
+				}
+				break;
+		}/*End of external switch - case*/
+		if(*token == t)
+			token = NULL;	
+	}/*End of while loop*/
 	return 0;
 }
 
@@ -603,20 +942,48 @@ int determine_set(int command_flag)
 {
 	if(command_flag == sst_tag_cpu_i_rts || command_flag == sst_tag_cpu_i_stop)
 			return SET3;					
-	else if(command_flag == sst_tag_cpu_i_not || command_flag == sst_tag_cpu_i_clr || sst_tag_cpu_i_inc ||
-		sst_tag_cpu_i_dec || sst_tag_cpu_i_jmp || sst_tag_cpu_i_bne || sst_tag_cpu_i_red ||
-		sst_tag_cpu_i_prn || sst_tag_cpu_i_jsr)
+	else if(command_flag == sst_tag_cpu_i_not || command_flag == sst_tag_cpu_i_clr || command_flag == sst_tag_cpu_i_inc ||
+		command_flag == sst_tag_cpu_i_dec || command_flag == sst_tag_cpu_i_jmp || command_flag == sst_tag_cpu_i_bne || 
+		command_flag == sst_tag_cpu_i_red || command_flag == sst_tag_cpu_i_prn || command_flag == sst_tag_cpu_i_jsr)
 			return SET2;
 	else
 		return SET1;
+}
 
-
+int is_immediate(char str[])
+{
+	int i, nr_begin, nr_end, nr_sign;
+	nr_begin = 0, nr_end = 0;
+	for(i = 0; i < strlen(str); i++)
+	{
+		if(isspace(str[i]) && nr_begin == 0)
+			continue;
+		if(str[i] == '#' && nr_sign == 0)
+			nr_sign = 1;
+		if(!isspace(str[i]) && nr_begin == 0 && nr_sign == 1)
+		{
+			nr_begin = 1;
+			continue;
+		}
+		if(nr_begin == 0 && (str[i] == '+' || str[i] == '-'))
+		{
+			nr_begin = 1;
+			continue;
+		}
+		if(!(isdigit(str[i])) && nr_begin == 1 && nr_end == 0)
+			return 0;
+		if(isspace(str[i]) && nr_begin == 1 && nr_end == 0)
+			nr_end = 1;
+		if(!isspace(str[i]) && nr_end == 1)
+			return 0;
+	}
+	return 1;
 }
 
 /*TEMPORARY - FOR TESTING ONLY*/
 int main()
 {
-	char test[] = ".string \"This is the way\"";
+	char test[] = "		 add  4, r4,";
 	sst_get_stt_from_line(test);
 	return 0;
 }
