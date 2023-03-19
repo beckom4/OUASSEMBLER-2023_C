@@ -1,60 +1,84 @@
-#include "linkedlist.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-/*Defining a node in the generic list.*/
-struct node
-{
-	void *data;
-	struct node* next;
-};
+/*Function declarations:*/
 
+/**
+ * creates a new list.
+ * @return list - A pointer to the list.
+ */
+LinkedList* create_list();
 
-struct node* insert_node_to_end(struct node** tail, void* data,int size)
-{
-	/*Allocating memoryy for the new node*/	
-	struct node *new_node = (struct node*)malloc(sizeof(struct node));
-	/*ALlocating memory for the data fiel.*/
-	new_node->data = malloc(size);
-	/*Storing the data of the new node by copying from one address to another*/
-	memcpy(new_node->data,data,size);
-	/*Insering the new node after tail*/
-	if((*tail) != NULL)
-		(*tail)->next=new_node; 
-	else
-		(*tail) = new_node;	
-   	/* updating tail node pointer*/
-	*tail = new_node;
-	return new_node;
+/**
+ * Adds a new to the end of the list.
+ * 
+ * @param list - A pointer to the list.
+ *	  data - a void pointer to the data field.
+ */
+void add_to_end(LinkedList* list, void* data);
+
+/**
+ * Generic iterartion of the list.
+ * 
+ * @param list - A pointer to the list.
+ *	  A void pointer to receive the function pointer.
+ */
+void iterate_list(LinkedList* list, void (*function)(void*));
+
+/**
+ * Freeing the memory allocated for the list.
+ * 
+ * @param list - A pointer to the list.
+ */
+void destroy_list(LinkedList* list);
+
+typedef struct node {
+    void* data;
+    struct node* next;
+} Node;
+
+typedef struct linked_list {
+    Node* head;
+    Node* tail;
+}LinkedList;
+
+LinkedList* create_list() {
+    LinkedList* list = (LinkedList*) malloc(sizeof(LinkedList));
+    list->head = NULL;
+    list->tail = NULL;
+    return list;
 }
 
-struct node* search_list(struct node *head, void *data, int size)
-{
-	struct node *current;
-	/*Looping over the list and comparing the data field of the current node to the one passed as an argument*/
-	for (current = head; current != NULL; current = current -> next)
-		if(memcmp(current->data, data, size) == 0)
-			return current;
-	return NULL;
+void add_to_end(LinkedList* list, void* data) {
+    Node* new_node = (Node*) malloc(sizeof(Node));
+    new_node->data = data;
+    new_node->next = NULL;
+    if (list->head == NULL) {
+        list->head = new_node;
+        list->tail = new_node;
+    } else {
+        list->tail->next = new_node;
+        list->tail = new_node;
+    }
 }
 
-void destroy_list(struct node *head) 
-{
-    	struct node *current = head;
-	/*Looping over the list in order to free its nodes' memory/*/
-   	for(current = head; current != NULL; current = current -> next)
-	{
-		free(current -> data);
-      		free(current);
-	}
+void iterate_list(LinkedList* list, void (*function)(void*)) {
+    Node* current = list->head;
+    while (current != NULL) {
+        function(current->data);
+        current = current->next;
+    }
+}
+
+void destroy_list(LinkedList* list) {
+    Node* current = list->head;
+    while (current != NULL) {
+        Node* next = current->next;
+        free(current);
+        current = next;
+    }
+    free(list);
 }
 
 
-/*Temporary function which will serve us for testing if required.*/
-void print_list(struct node* head) 
-{
-    	struct node* current = head;
-  	while (current != NULL) {
-        	printf("%d ", *(int*)current->data);
-       		current = current->next;
-  	  }
-   	 printf("\n");
-}
