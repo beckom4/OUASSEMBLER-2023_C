@@ -320,7 +320,10 @@ int check_reg(const char str[])
 	for(i = 0; i < strlen(str); i++)
 	{
 		if(word_end == 1 && !isspace(str[i]))
+		{
+			printf("flag\n");
 			return -1;
+		}
 		if(word_begin == 1)
 		{
 			for(j = 0; j < NUM_OF_REGS; j++)
@@ -536,22 +539,22 @@ int handle_directive(int directive_flag, char last_portion[], struct sst *res, i
 
 int handle_command(int command_flag, char last_portion[], struct sst *res, int num_of_operands)
 {
-	
-	int i, index_of_tok, open_bracket, close_bracket;
+	int i, index_of_tok, open_bracket, close_bracket, comma, end;
 	long int operand;
 	char current_portion[MAX_LINE], sub_str_temp[MAX_LINE];
 	char *token;
 	char t;
 
-	open_bracket = 0, close_bracket = 0;	
+	open_bracket = 0, close_bracket = 0, comma = 0, end = 0;	
 	token = &t;
 	res->syntax_option = sst_instruction;
 
 	printf("last portion is: %s\n", last_portion);
 	res->asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag = command_flag;
 
-	while(token != NULL)
+	while(end == 0)
 	{
+		printf("flag1\n");
 		memset(current_portion, '\0', MAX_LINE);
 		for(i = 0; i < NUM_OF_TOKENS; i++)
 		{
@@ -563,7 +566,11 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 			}
 		}
 		if(token == NULL)
+		{
+			end = 1;
 			token = &t;
+		}
+		printf("token is: %c\n", *token);
 		switch(*token)
 		{
 			case '(':
@@ -589,6 +596,14 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 				}
 				break;
 			case ',':
+				++comma;
+				printf("comma is: %d\n", comma);
+				if(comma > 1)
+				{
+					res->syntax_option = sst_syntax_error;
+					strcpy(res->syntax_error_buffer,"Extra comma/s.");
+					return FOUND_ERROR;
+				}
 				for(i = 0; i < index_of_tok; i++)
 					current_portion[i] = last_portion[i];
 				operand = check_reg(current_portion);
@@ -626,7 +641,7 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 							++num_of_operands;
 							strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
 							strcpy(last_portion, sub_str_temp);
-							printf("last portion 2 is: %s\n", last_portion);
+							printf("last portion 3 is: %s\n", last_portion);
 							break;	
 						case SET3:
 							res->syntax_option = sst_syntax_error;
@@ -931,8 +946,7 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 				}
 				break;
 		}/*End of external switch - case*/
-		if(*token == t)
-			token = NULL;	
+		printf("end is: %d\n", end);	
 	}/*End of while loop*/
 	return 0;
 }
