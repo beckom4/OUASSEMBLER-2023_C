@@ -23,6 +23,7 @@ void add_to_end(LinkedList* list, void* data);
  * 
  * @param list - A pointer to the list.
  *	  A void pointer to receive the function pointer.
+ *    function_ctx - user defined context for the function.
  */
 void iterate_list(LinkedList* list, void (*function)(void*));
 
@@ -63,10 +64,12 @@ void add_to_end(LinkedList* list, void* data) {
     }
 }
 
-void iterate_list(LinkedList* list, void (*function)(void*)) {
+void iterate_list(LinkedList* list, int (*function)(void *, void *), void *function_ctx) {
     Node* current = list->head;
     while (current != NULL) {
-        function(current->data);
+        list->iterator = current;
+        if(function(current->data, user_defined_op_ctx))
+            return;
         current = current->next;
     }
 }
