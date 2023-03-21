@@ -68,7 +68,7 @@ void iterate_list(LinkedList* list, int (*function)(void *, void *), void *funct
     Node* current = list->head;
     while (current != NULL) {
         list->iterator = current;
-        if(function(current->data, user_defined_op_ctx))
+        if(function(current->data, function_ctx))
             return;
         current = current->next;
     }
