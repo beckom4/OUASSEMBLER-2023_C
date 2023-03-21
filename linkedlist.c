@@ -25,7 +25,7 @@ void add_to_end(LinkedList* list, void* data);
  *	  A void pointer to receive the function pointer.
  *    function_ctx - user defined context for the function.
  */
-void iterate_list(LinkedList* list, void (*function)(void*));
+void iterate_list(LinkedList* list, int (*function)(void *, void *), void *function_ctx);
 
 /**
  * Freeing the memory allocated for the list.
