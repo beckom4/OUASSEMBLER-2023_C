@@ -1,195 +1,265 @@
-#include "preprocessor.h"
+#innclude "preprocessor.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 
-/*Defining a linked list that will contain the macros. The list is declared in the h file and defined here in order to keep the encapsulation principle.*/
-struct Macros {
-	int macro_index;
-	char macro[MAX_LINE];
+typedef struct Macro{
 	char macro_name[MAX_LINE];
-	struct Macros* next;
-};
+	char *macro_body;
+}Macro;
+
+/*Functions import:*/
+
+extern LinkedList* create_list();
+extern void add_to_end(LinkedList* list, void* data);
+extern void iterate_list(LinkedList* list, int (*function)(void *, void *), void *function_ctx);
+extern void destroy_list(LinkedList* list);
+
+/*Function declarations:*/
+
+/*Checks whether a string consists of white spaces only.
+	@param: 
+		str - The string to check.
+	@return:
+		0 if the string is not empty.
+		1 if the string is empty.
+*/
+int is_empty(char str[]);
+
+/*
+	The main function of the preprocessor. It produces a file whose name is the same as the one it got, only with extended_ attached to it.
+	The file produced will replace each macro with its content.
+	@param: 
+		fptr is a pointer to the file.
+		file name is a pointer to the name of the file
+	@return:
+		0 if the process ran smoothly.
+		1 if severe issues emerged that required the program to terminate.
+*/
+int preprocessor(FILE *fptr, char *file_name);
+
+/*
+	Creates a new node macro.
+	@return:
+		A new macro with a full macro name and yet incomplete macro body.
+*/
+Macro *create_macro(char *macro_name);
+
+/*
+	Produces the files that has the extended text including the content of the macros.
+	@param: 
+		new_txt is a pointer to the newtext that will be printed to the file. 
+		old_file_name is a pointer to the old name of the file. 
+	@return:
+		0 if any issues emerged that required the program to be terminated.
+        1 if it went smoothly.
+*/
+
+int produce_file(char *new_txt, char *file_name);
+/*
+	Checks whhether or not a macro's name is a command's name which is an error.
+	@param: 
+		macro_name - a pointer to the macro's name.
+	@return:
+		0 if the macro's name is not a command's name.
+		1 if it is a command's name.
+*/
+int is_command(char *macro_name);
+
+/*
+	Compares between a given string and a macro name.
+	@param: 
+		data - void pointer that will be casted to a macro.
+        	ctx - void pointer to a context given to us by the user. In this case, it would be the string to compare.
+	@return:
+		0 if the string is not a macro name.
+		1 if it is a macro name.
+*/
+int compare(void* data, void* ctx);
+
+/*
+	frees the memory allocated for the macro.
+	@param: 
+		macro - The macro to destroy.
+       	 	dummy - a dummy void pointer.
+	@return:
+		0 - dummy value
+*/
+int destroy_macro(void *macro, void *dummy);
+
 
 
 int preprocessor(FILE *fptr, char file_name[])
 {	
-	int size_before_endmcr, macro_counter, size, rows_counter, macro_index, error_flag, endmcr_flag, macro_body_flag, mcr_flag;
+	int i, flag, error_flag, size, index, num_lines, len;
 
 	char mcr[] = "mcr";
 	char endmcr[] = "endmcr";
-	char original_line[MAX_LINE];	
-	char *new_txt, *portion1, *portion2, *macro_name;
+	char original_line[MAX_LINE];
+	char copy[MAX_LINE], copy2[MAX_LINE];	
+	char *new_txt, *portion1, *portion2, *portion, *macro_name, *macro_body;
 
-	struct Macros *head, *temp;
+	LinkedList* macro_list = create_list();
+	Node* current;
+	Macro* macro;
 
 	new_txt = (char*)malloc(sizeof(char)*MAX_LINE);
-
-	head = NULL;
-	temp = NULL;
 
 	portion1 = NULL;
 	portion2 = NULL;
 
-	macro_counter = 0;
-	rows_counter = 0;
-	size = 0;
-	macro_index = 0;
-	macro_body_flag = 0;
-	mcr_flag = 0;
-	
+	size = 0, num_lines = 0, flag =0;
+
 	while ((fgets(original_line, MAX_LINE, fptr)) != NULL) 
-    	{
-		error_flag = 0;
-		endmcr_flag = 0;
-		++rows_counter;
-		/*Checking if there's a word in the line that needs to be replaced with a macro*/
-		macro_index = is_in_macro_list(head,original_line);
-		if(macro_index != -1 && temp != NULL && error_flag == 0)
+	{
+		i = 0;
+		size += MAX_LINE;
+		new_txt = (char*)realloc(new_txt, size + sizeof(char));
+		strcpy(copy, original_line);
+		portion = strtok(copy," \t");
+		while(portion != NULL)
 		{
-			size += MAX_LINE;
-			new_txt = (char*)realloc(new_txt, size + sizeof(char)); 
-			insert_string(&new_txt, original_line, head, macro_index);	
+			/*Checking if there's a word in the line that needs to be replaced with a macro*/
+			iterate_list(macro_list,compare,portion);
+			if(macro_list->iterator != NULL)
+			{
+				size += MAX_LINE;
+				portion2 = strstr(original_line, portion);
+
+				index = (int)(portion2 - original_line);
+				for(i = 0; i < index; i++)
+					copy2[i] = original_line[i];
+				copy2[i] = '\0';				
+				strcat(new_txt, copy2);
+				current = macro_list->iterator;
+				macro = (Macro*) current->data;
+			   	macro_body = macro->macro_body;
+				size += strlen(macro_body);
+				new_txt = (char*)realloc(new_txt, size * sizeof(char));
+				strcat(new_txt, macro_body);		
+				len = strlen(macro->macro_name);
+				if(portion2[len] != '\0')
+				{
+					i = 0;
+					while(portion2[len] != '\0')
+					{
+						copy[i] = portion2[len];
+						++len;
+					}
+					copy[i] = '\0';
+					strcat(new_txt, copy);
+				}
+				flag = DONE;
+				macro_list->iterator = NULL;
+			}
+			portion = strtok(NULL," \t");
+				
+				
 		}
 		/*Checking for endmcr*/
 		portion2 = strstr(original_line, endmcr);
 		if(portion2 != NULL)
-			endmcr_flag = 1;
-		if(endmcr_flag == 0)
+			flag = ENDMCR;
+		/*Checking for mcr*/
+		if(flag == 0)
+		{
 			portion1 = strstr(original_line, mcr);
-		if(portion1 != NULL)
-			mcr_flag = 1;
-		/*Checking if portion is "mcr"*/
-		if(mcr_flag == 1)
-		{
-			macro_name = strtok(portion1," \t\n");
-			macro_name = strtok(NULL," \t\n");
-			if(is_command(macro_name) == 1)
-			{
-				error_flag = 1;
-				mcr_flag = 0;
-				printf("The macro's name in row %d is illegal: It is a command's name. \n", rows_counter);
-			}
-			else
-			{				
-				/*Adding the macro to the head of the list*/
-				temp = create_macro(head,macro_counter,macro_name);
-				++macro_counter;
-				printf("macro_counter is: %d\n", macro_counter);
-				if (temp == NULL)
+			if(portion1 != NULL)
+				flag = MCR;
+		}
+		
+		switch(flag) {
+             		case 0: 
+				flag = 0;
+				strcat(new_txt, original_line);
+			    	break; 
+			/*mcr found*/
+			 case MCR: 
+				portion2 = strtok(portion1, " \t");
+				macro_name = strtok(NULL, " \t");
+				iterate_list(macro_list,compare,macro_name);
+				/*Making sure that the macro's name is not taken.*/
+				if(macro_list->iterator != NULL)
 				{
-					printf("The system could not allocate enough memory for some of your text.\n");
-					return END_PROGRAM;
-				} 
+						macro_list->iterator = NULL;
+						break;
+				}
 				else
-					head = temp;
-				macro_body_flag = 1;
-				mcr_flag = 0;
-				continue;
-			}
-		}
-		/*If there is nothing special about this line, add it to new_txt*/
-		if(macro_index == -1 && macro_body_flag == 0 && error_flag == 0  && endmcr_flag == 0)
-		{	
-			size += MAX_LINE;
-			new_txt = (char*)realloc(new_txt, size + sizeof(char)); 
-			strcat(new_txt, original_line);	
-			continue;
-		}
-		/*endmcr is in a later row*/
-		if(macro_body_flag == 1 && endmcr_flag == 0)
-		{
-			/*printf("original line is: %s\n", original_line);*/		
-			strcat(head->macro,original_line);
-		}
-	
-		/*endmcr is in this row*/
-		if( endmcr_flag == 1)
-		{			
-			size_before_endmcr = portion2 - original_line;
-			strncat(head->macro,original_line,size_before_endmcr);
-			macro_body_flag = 0;
-		}
+				{
+					macro = create_macro(macro_name);
+					macro->macro_body = (char*)malloc(MAX_LINE * sizeof(char));
+					macro->macro_body[0] = '\0';
+					flag = MCR_BODY;
+			    		break;
+				}
+			/*MCR_BODY found*/
+			 case MCR_BODY: 
+				++num_lines;
+				size += MAX_LINE;
+				macro->macro_body = (char*)realloc(macro->macro_body, size *  sizeof(char));
+				strcat(macro->macro_body, original_line);
+				i = 0;
+			    	break;
+			/*endmcr found*/
+			 case ENDMCR:
+				flag = 0;
+				add_to_end(macro_list, macro);
+				/*num_lines = 0;*/
+			    	break;
+			case DONE:
+				flag = 0;
+				break;
+            	}  
 	}
-	printf("new_txt is: \n%s\n", new_txt);
-	free_list(head);
+	printf("macro body is: %s\n", macro ->macro_body);
+	printf("new txt is: %s\n", new_txt);	
+	error_flag = produce_file(new_txt, file_name);
+
+	iterate_list(macro_list, destroy_macro, NULL);
+	destroy_list(macro_list);
 	free(new_txt);
-	if(produce_file(new_txt, file_name) != 0)
-		return END_PROGRAM;
-	/*TEMPORARY - DON'T FORGET TO DELETE*/
-	for(temp = head; temp != NULL; temp = temp->next)
-	{
-		printf("macro_name is:%s\n", temp->macro_name);
-		printf("macro is: \n%s\n", temp->macro);
-		printf("macro_index is: %d\n", temp->macro_index);
-	}
-	return 0;
+	return error_flag;
 }
 		
 
-
-
-int is_in_macro_list(struct Macros *head, char original_line[]) 
+Macro *create_macro(char *macro_name) 
 {
-	char *portion;
-	struct Macros *current ;
-	for(current = head; current != NULL; current = current -> next)
-	{
-		portion = strstr(original_line, current -> macro_name);
-		if(portion != NULL)
-			return current -> macro_index;	
-	}		
-   	return -1;
-}
-
-
-void insert_string(char **new_txt, char original_line[], struct Macros *head, int macro_index) 
-{
-	struct Macros *current ;
-	
-	for(current = head; current->macro_index != macro_index && current != NULL;current = current -> next);
-	strcat(*new_txt,current->macro);
-}
-
-
-struct Macros *create_macro(struct Macros *next, int macro_counter, char *macro_name) 
-{
-	struct Macros *newMacro = (struct Macros*)malloc(sizeof(struct Macros));
-	if(newMacro == NULL)
-		return NULL;
-	newMacro->macro_index = macro_counter;
-	strcpy(newMacro->macro_name,macro_name);
-    	newMacro->next = next;
+	Macro *newMacro = (Macro*)malloc(sizeof(Macro));
+	strcpy(newMacro->macro_name, macro_name);
+	newMacro->macro_body = NULL;
    	return newMacro;
 }
 
-void free_list(struct Macros *head) 
-{
-   	struct Macros *current = head;
-   	while (current != NULL) 
-	{
-        	struct Macros *next = current->next;
-        	free(current);
-       		current = next;
-    	}
-}
 
-int produce_file(char *new_txt, char *old_file_name)
+int produce_file(char *new_txt, char *file_name)
 {
-	 /*IMPORTANT - WE WILL PROBABLY NEED TO ADD THE ABILITY TO NAME THE FILE THE WAY THAT IT WAS NAMED BEFORE SO THIS VERSION IS PROBABLY NOT FINAL*/
-	 char new_file_name[MAX_LINE];
-	 char extended[] ="extended_";
-	 FILE* fptr = fopen(new_file_name, "w"); 
-	 
-	 strcpy(new_file_name, extended);
-	 strcat(new_file_name, old_file_name);
+	 char as[] =".as"; 
+	 FILE* fptr;
+	 strcat(file_name,as);
+
+	 fptr = fopen(file_name, "w");
 	
    	 if (fptr == NULL) 
 	 { 
-         	printf("Error creating file!\n"); 
+         	printf("Error opening file!\n"); 
         	return END_PROGRAM;
    	 }
     	 fputs(new_txt, fptr); 
          fclose(fptr); 
 	 return 0;
+}
+
+int compare(void* data, void* ctx) {
+    Macro* macro = (Macro*) data;
+    char *macro_name_check ;
+
+    macro_name_check = (char*) ctx;
+ 
+    if (strcmp(macro_name_check, macro->macro_name) == 0)
+            return 1;
+    return 0;
 }
 
 
@@ -208,4 +278,22 @@ int is_command(char *macro_name)
 	}
 	return 0;
 
+}
+
+
+int is_empty(char str[])
+{
+	int i;
+	for(i = 0; i < strlen(str);i++)
+		if(!isspace(str[i]))
+			return 0;
+	return 1;
+}
+
+
+int destroy_macro(void *void_macro, void *dummy) {
+    Macro *macro = (Macro *)void_macro;
+    free(macro->macro_body);
+    free(macro);
+    return 0;
 }
