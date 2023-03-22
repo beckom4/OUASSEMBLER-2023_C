@@ -67,9 +67,10 @@ void add_to_end(LinkedList* list, void* data) {
 void iterate_list(LinkedList* list, int (*function)(void *, void *), void *function_ctx) {
     Node* current = list->head;
     while (current != NULL) {
-        list->iterator = current;
-        if(function(current->data, function_ctx))
+        if(function(current->data, function_ctx)){
+            list->iterator = current;
             return;
+        }
         current = current->next;
     }
 }
