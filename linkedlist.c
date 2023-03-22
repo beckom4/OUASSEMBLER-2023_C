@@ -42,6 +42,7 @@ typedef struct node {
 typedef struct linked_list {
     Node* head;
     Node* tail;
+    Node* iterator;
 }LinkedList;
 
 LinkedList* create_list() {
