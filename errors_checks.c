@@ -4,15 +4,111 @@
 #include <ctype.h>
 #include <stdio.h>
 
+/**
+ * Checks the label for errors.
+ * 
+ * @param str - the string to check.
+ *        res - a pointer to the sst.
+ * @return 1 - No errors found.
+ *         FOUND_ERROR - error found.
+ */
+int label_errors(char str[], struct sst *res);
+/**
+ * Checks the directive data for errors.
+ * 
+ * @param str - the string to check.
+ *        res - a pointer to the sst.
+ * @return 1 - No errors found.
+ *         FOUND_ERROR - error found.
+ */
 int directive_data_errors(char str[], struct sst *res);
 
+/**
+ * Checks the directive string for errors.
+ * 
+ * @param str - the string to check.
+ *        res - a pointer to the sst.
+ * @return 1 - No errors found.
+ *         FOUND_ERROR - error found.
+ */
+int directive_string_errors(char str[], struct sst *res);
+
+/**
+ * Checks the directives entry and extern for errors.
+ * 
+ * @param str - the string to check.
+ *        res - a pointer to the sst.
+ * @return 1 - No errors found.
+ *         FOUND_ERROR - error found.
+ */
+int directive_entext_errors(char str[], struct sst *res);
+
+/**
+ * Checks a command with no operands for errors.
+ * 
+ * @param str - the string to check.
+ *        res - a pointer to the sst.
+ * @return 1 - No errors found.
+ *         FOUND_ERROR - error found.
+ */
+int no_operands_errors(char str[], struct sst *res);
+
+/**
+ * Checks a command with with a label as operand for errors.
+ * 
+ * @param str - the string to check.
+ *        res - a pointer to the sst.
+ * @return 1 - No errors found.
+ *         FOUND_ERROR - error found.
+ */
+int operand_label_errors(char str[], struct sst *res);
+
+/**
+ * Checks if a string is empty or not.
+ * 
+ * @param str - the string to check.
+ * @return 1 - No errors found.
+ *         FOUND_ERROR - error found.
+ */
 int is_empty_error(char str[]);
 
+/**
+ * Checks if a string is a directive or not.
+ * 
+ * @param str - the string to check.
+ * @return 1 - the string is a directive.
+ *         0 - the string is not a directive.
+ */
 int is_directive(char str[]);
 
+/**
+ * Checks if a string is a register or not.
+ * 
+ * @param str - the string to check.
+ * @return 1 - The string is a register.
+ *         0 - The string is not a register.
+ */
 int is_reg(char str[]);
 
+/**
+ * Checks if a string is a command or not.
+ * 
+ * @param str - the string to check.
+ * @return 1 - The string is a coammnd.
+ *         0 - The string is not a command.
+ */
 int is_command(char str[]);
+
+/**
+ * Checks if a char is ascii or not.
+ * 
+ * @param str - the char to check.
+ * @return 1 - The char is ascii.
+ *         0 - The char is not ascii.
+ */
+int is_ascii(char c);
+
+
 
 int label_errors(char str[], struct sst *res)
 {
@@ -22,35 +118,35 @@ int label_errors(char str[], struct sst *res)
 	{
 		res->syntax_option = sst_syntax_error;
 		strcpy(res->syntax_error_buffer,"label is empty");
-		return 1;
+		return FOUND_ERROR;
 	}
 	/*Checking if the label is a command/ register/ directive*/
 	if(is_command(str) ==  1 || is_reg(str) == 1 || is_directive(str) == 1)
 	{
 		res->syntax_option = sst_syntax_error;
 		strcpy(res->syntax_error_buffer,"label name is a command/ directive/ register");
-		return 1;
+		return FOUND_ERROR;
 	}	
 	for(i = 0; i < strlen(str); i++)
 		if(!isalpha(str[i]))
 		{
 			res->syntax_option = sst_syntax_error;
 			strcpy(res->syntax_error_buffer,"label has non-alphabetical characters.");
-			return 1;
+			return FOUND_ERROR;
 		}
-	return 0;		
+	return 1;		
 }
 
 int directive_data_errors(char str[], struct sst *res)
 {
 	int i, first_digit_flag;
 	first_digit_flag = 0;
-	/*Checking if there are too many commas n tthe text*/
+	/*Checking if there are too many commas in the text*/
 	if(is_empty_error(str) == 1 || str[0] == '\0')
 	{
 		res->syntax_option = sst_syntax_error;
-		strcpy(res->syntax_error_buffer,"Extra comma after .data.");
-		return 1;
+		strcpy(res->syntax_error_buffer,"No operands after directive");
+		return FOUND_ERROR;
 	}		
 	/*Checking if the this portion is empty, meaning 2 consecutive commas*/
 	for(i = 0; i < strlen(str); i++)
@@ -59,7 +155,7 @@ int directive_data_errors(char str[], struct sst *res)
 		{
 			res->syntax_option = sst_syntax_error;
 			strcpy(res->syntax_error_buffer,"illegal char after .data - char is not a digit.");
-			return 1;
+			return FOUND_ERROR;
 		}
 		else if(isdigit(str[i]))
 			first_digit_flag = 1;
@@ -67,10 +163,10 @@ int directive_data_errors(char str[], struct sst *res)
 		{
 			res->syntax_option = sst_syntax_error;
 			strcpy(res->syntax_error_buffer,"Extra characters after parameter.");
-			return 1;
+			return FOUND_ERROR;
 		}
 	}
-	return 0;	
+	return 1;	
 }
 
 int directive_string_errors(char str[], struct sst *res)
@@ -80,6 +176,12 @@ int directive_string_errors(char str[], struct sst *res)
 	/*Checking if the this portion is empty, meaning 2 consecutive commas*/
 	for(i = 0; i < strlen(str); i++)
 	{
+		if(is_empty_error(str) == 1 || str[0] == '\0')
+		{
+			res->syntax_option = sst_syntax_error;
+			strcpy(res->syntax_error_buffer,"No operands after directive");
+			return 1;
+		}
 		if(apostrophes_flag == 1 && str[i] == '\"')
 			apostrophes_flag = 0;
 		else if(isspace(str[i]))
@@ -112,27 +214,71 @@ int directive_string_errors(char str[], struct sst *res)
 
 int directive_entext_errors(char str[], struct sst *res)
 {
-	int i,first_word_begin,first_word_end;
-	first_word_begin = 0, first_word_end = 0;
-	/*Checking for multiple words.*/
-	for(i = 0; i < strlen(str); i++)
-	{
-		if(isspace(str[i]) && first_word_begin == 0)
-			continue;
-		if(!isspace(str[i]) && first_word_begin == 0)
-			first_word_begin = 1;
-		if(first_word_begin == 1 && isspace(str[i]))
-			first_word_end = 1;
-		if(first_word_end == 1 && !isspace(str[i]))
-		{
+	int i;
+	char copy[MAX_LINE];
+	char *portion;
+
+	if(is_empty_error(str) == 1 || str[0] == '\0') {
 			res->syntax_option = sst_syntax_error;
-			strcpy(res->syntax_error_buffer,"Multiple parameters after directive");
-			return 1;
-		}	
+			strcpy(res->syntax_error_buffer,"No operands after directive");
+			return FOUND_ERROR;
 	}
-	return 0;
+	strcpy(copy, str);
+	portion = strtok(copy, " \t");
+	for(i = 0; i < strlen(portion); i++){
+		if(!isalpha(str[i])) {
+			res->syntax_option = sst_syntax_error;
+			strcpy(res->syntax_error_buffer,"label has non-alphabetical characters.");
+			return FOUND_ERROR;
+		}
+	}
+	portion = strtok(NULL, " \t");
+	if(portion != NULL){
+		res->syntax_option = sst_syntax_error;
+		strcpy(res->syntax_error_buffer,"Multiple parameters after directive");
+		return FOUND_ERROR;
+	}
+	return 1;
+	
 }
 
+int no_operands_errors(char str[], struct sst *res)
+{
+	int i;
+	for(i = 0; i < strlen(str); i++)
+	{
+		if(is_empty_error(str) == 0)
+		{
+			res->syntax_option = sst_syntax_error;
+			strcpy(res->syntax_error_buffer,"Extra characters/ operands after stop/ rts.");
+			return FOUND_ERROR;
+		}	
+	}
+	return 1;
+}
+
+int operand_label_errors(char str[], struct sst *res) {
+	int i;
+	char copy[MAX_LINE];
+	char *portion;
+
+	strcpy(copy, str);
+	portion = strtok(copy, " \t");
+	for(i = 0; i < strlen(portion); i++){
+		if(!isalpha(str[i])) {
+			res->syntax_option = sst_syntax_error;
+			strcpy(res->syntax_error_buffer,"label has non-alphabetical characters.");
+			return FOUND_ERROR;
+		}
+	}
+	portion = strtok(NULL, " \t");
+	if(portion != NULL){
+		res->syntax_option = sst_syntax_error;
+		strcpy(res->syntax_error_buffer,"Multiple parameters before open bracket.");
+		return FOUND_ERROR;
+	}
+	return 1;	
+}
 
 int is_empty_error(char str[])
 {
@@ -145,7 +291,7 @@ int is_empty_error(char str[])
 
 int is_ascii(char c) 
 {
-	return (c >= 0 && c <= 127);
+	return (c >= 0 && c <= MAX_ASCII);
 }
 
 
