@@ -187,27 +187,26 @@ struct sst sst_get_stt_from_line(const char * line) {
 		/*Checking for ':', meaning for labels:*/
 		label_flag = check_label(&res, line);
 		if(label_flag == FOUND_ERROR)
-			error_flag = 1;
+			error_flag = FOUND_ERROR;
 		else if(label_flag != -1)
 			*index += label_flag + 1;
-		if(error_flag != 1)
+		if(error_flag != FOUND_ERROR)
 			command_flag = check_command(line, &index);
-		printf("COMMAND FLAG IS: %d\n", command_flag);
 		/*Checking if the current portion of the line is a command or not.*/
 		if(command_flag != -1)
 			res.syntax_option = sst_instruction;
 		/*Checking if this is a directive*/
-		else if(error_flag != 1)
+		else if(error_flag != FOUND_ERROR)
 			directive_flag = check_directive(line, &index, &res);
 		/*Checking if this is neither a command nor a directive*/
 		if(command_flag == -1 && directive_flag == -1){
-			error_flag = 1;
+			error_flag = FOUND_ERROR;
 			res.syntax_option = sst_syntax_error;
-			strcpy(res.syntax_error_buffer,"Illegal command/ directive.");
+			strcpy(res.syntax_error_buffer,"Illegal label/command/ directive.");
 		}
 		/*Checking if the directive has no operands*/
 		if(directive_flag == FOUND_ERROR)
-			error_flag = 1;
+			error_flag = FOUND_ERROR;
 		if(error_flag == 0){
 			j = 0;
 			while(line[*index] != '\0'){
@@ -223,7 +222,7 @@ struct sst sst_get_stt_from_line(const char * line) {
 				token = strchr(last_portion, tokens[1].tok);
 				if(token == NULL)
 				{
-					error_flag = 1;
+					error_flag = FOUND_ERROR;
 					res.syntax_option = sst_syntax_error;
 					strcpy(res.syntax_error_buffer,"There are no commas after .data.");
 				}
@@ -231,21 +230,15 @@ struct sst sst_get_stt_from_line(const char * line) {
 			else if(directive_flag == 1)
 				error_flag = directive_string_errors(last_portion, &res);
 			/*Checking if the directive is .extern and the user defined a label anyway.*/
-			else if(directive_flag == 2 && label_flag != -1) {
-				memset(res.label, '\0', sizeof(res.label));
-				strcpy(res.asm_directive_and_cpu_instruction.syntax_directive.dir.label_array.warning,"Warning: label defining before .extern is 					forbiden");
-			}		
-			if(error_flag != FOUND_ERROR)  {
+			else if(directive_flag == 2 && label_flag != -1) 
+				memset(res.label, '\0', sizeof(res.label));		
+			if(error_flag != FOUND_ERROR) 
 				handle_directive(directive_flag, last_portion, &res, 0);
-				printf("the parameter is: %s\n", res.asm_directive_and_cpu_instruction.syntax_directive.dir.string);
-				printf("the parameter is: %s\n", res.asm_directive_and_cpu_instruction.syntax_directive.dir.label_array.label);
-				printf("warning is: %s\n", res.asm_directive_and_cpu_instruction.syntax_directive.dir.label_array.warning);
-			}
 		}
 		/*Handling the command.*/
-		if(error_flag == 0 && command_flag != -1)
+		if(error_flag != FOUND_ERROR && command_flag != -1)
 			if(handle_command(command_flag, last_portion, &res, 0) == FOUND_ERROR)
-				error_flag = 1;						
+				error_flag = FOUND_ERROR;						
 	}
 
 	/*TEMPORARY - FOR CHECKS ONLY*/
@@ -258,7 +251,7 @@ struct sst sst_get_stt_from_line(const char * line) {
 	/*TEMPORARY - FOR CHECKS ONLY*/
 	
 
-	if(error_flag == 1)
+	if(error_flag == FOUND_ERROR)
 		res.syntax_option = sst_syntax_error;
 
    	return res;
@@ -308,6 +301,8 @@ long int check_reg(const char str[]) {
     found = 0;
     strcpy(copy, str);
     portion = strtok(copy, " \t");
+    if(portion == NULL)
+	return FOUND_ERROR;
     for (i = 0; i < NUM_OF_REGS; i++) {
         if (strcmp(portion, regs_arr[i]) == 0) {
             found = 1;
@@ -360,19 +355,15 @@ int check_directive(const char str[], int **index, struct sst *res) {
 	char directive[MAX_LINE];
 	const char directives_arr[][WORD_SIZE] = {".data",".string",".entry",".extern"};
 	j = 0;
-	printf("string to check is: %s\n", str);
 	temp = **index;
 	while (parse_end != 1) {
     		if (!isspace(str[**index])) {
        			parse_begin = 1;
         		directive[j] = str[**index];
         		++j;
-    		} 
-		if (str[**index] == '\0' && parse_begin == 1) { 
-       			res->syntax_option = sst_syntax_error;
-			strcpy(res->syntax_error_buffer,"No operands after directive.");
-			return FOUND_ERROR;
 		}
+    		if (str[**index] == '\0' && parse_begin == 1)
+			return -1;
  		if(isspace(str[**index]) && parse_begin == 1) {
 			directive[j] = '\0';
 			parse_end = 1;
@@ -380,7 +371,6 @@ int check_directive(const char str[], int **index, struct sst *res) {
 		if(str[**index] != '\0')
     			++(**index);
 	}
-	printf("directive is: %s\n", directive);
 	for(i = 0; i < NUM_OF_INSTRUCTIONS; i++) {
 		if(strcmp(directive,directives_arr[i]) == 0)
 			return i;
@@ -404,7 +394,7 @@ int check_label(struct sst *res, const char *line) {
 			first_portion[i] = line[i];
 		first_portion[index_of_tok] = '\0';
 		printf("First portion is: %s\n ", first_portion);
-		if(label_errors(first_portion, res) == 0) {
+		if(label_errors(first_portion, res) != FOUND_ERROR) {
 			strcpy(res->label,first_portion);
 			return index_of_tok;
 		}
@@ -422,7 +412,6 @@ int handle_directive(int directive_flag, char last_portion[], struct sst *res, i
 	char parameter[MAX_LINE], sub_str[MAX_LINE];
 	error_flag = 0, index_of_tok = 0;
 	res->syntax_option = sst_directive;
-	printf("last portion is: %s\n", last_portion);
 	switch(directive_flag){
 		/*Handling the directive .data*/
 		case 0:
@@ -431,7 +420,7 @@ int handle_directive(int directive_flag, char last_portion[], struct sst *res, i
 			if(token == NULL) {
 				strcpy(parameter, last_portion);
 				error_flag = directive_data_errors(parameter, res);
-				if(error_flag == 1)
+				if(error_flag == FOUND_ERROR)
 					printf("%s\n",res->syntax_error_buffer);
 				param = strtol(parameter, NULL, DEC);
 				printf("param is: %ld\n", param);
@@ -445,8 +434,6 @@ int handle_directive(int directive_flag, char last_portion[], struct sst *res, i
 				strncpy(parameter, last_portion, index_of_tok);
 				parameter[index_of_tok] = '\0';
 				error_flag = directive_data_errors(parameter, res);
-				if(error_flag == 1)
-					printf("%s\n",res->syntax_error_buffer);
 				printf("parameter is: %s\n", parameter);
 				param = strtol(parameter, &token, DEC);
 				printf("param is: %ld\n", param);
@@ -459,7 +446,7 @@ int handle_directive(int directive_flag, char last_portion[], struct sst *res, i
 			res->asm_directive_and_cpu_instruction.syntax_directive.dir_tag = sst_tag_dir_string;
 			token = strchr(last_portion, tokens[4].tok);
 			if(token == NULL)
-				return 0;
+				return 1;
 			else {	
 				index_of_tok = (int)(token - last_portion);
 				strcpy(sub_str,&last_portion[index_of_tok + 1]);
@@ -467,7 +454,7 @@ int handle_directive(int directive_flag, char last_portion[], struct sst *res, i
 				res->asm_directive_and_cpu_instruction.syntax_directive.dir.string[index_of_tok] = '\0';
 				return handle_directive(directive_flag, sub_str, res, 0);	
 			}
-		/*handling the directive .entry*/
+		/*Handling the directive .entry*/
 		case 2:
 			if(directive_entext_errors(last_portion, res) == FOUND_ERROR)
 				return FOUND_ERROR;
@@ -475,7 +462,7 @@ int handle_directive(int directive_flag, char last_portion[], struct sst *res, i
 			token = strtok(last_portion," \t");
 			strcpy(res->asm_directive_and_cpu_instruction.syntax_directive.dir.label_array.label, token);
 			break;
-		/*handling the directive .extern*/
+		/*Handling the directive .extern*/
 		case 3:
 			if(directive_entext_errors(last_portion, res) == FOUND_ERROR)
 				return FOUND_ERROR;
@@ -500,9 +487,7 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 	res->syntax_option = sst_instruction;
 
 	res->asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag = command_flag;
-
 	while(end == 0) {
-		printf("flag1\n");
 		memset(current_portion, '\0', MAX_LINE);
 		for(i = 0; i < NUM_OF_TOKENS; i++) {
 			token = strchr(last_portion, tokens[i].tok);
@@ -515,7 +500,6 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 			end = 1;
 			token = &t;
 		}
-		printf("token is: %c\n", *token);
 		switch(*token) {
 			case '(':
 				if(determine_set(command_flag) != SET2){
@@ -541,7 +525,6 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 				break;
 			case ',':
 				++comma;
-				printf("comma is: %d\n", comma);
 				if(comma > 1) {
 					res->syntax_option = sst_syntax_error;
 					strcpy(res->syntax_error_buffer,"Extra comma/s.");
@@ -574,16 +557,20 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 							++num_of_operands;
 							strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
 							strcpy(last_portion, sub_str_temp);
-							printf("last portion 2 is: %s\n", last_portion);
 							break;
 						/*1 operand with comma - Must be label with 2 operands: 1st op is reg*/	
 						case SET2:
+							/*The only set 2 commands that have a comma are ones with a label with operands.*/
+							if(res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.ops_tag != 								sst_tag_op_label_with_operands){
+								res->syntax_option = sst_syntax_error;
+								strcpy(res->syntax_error_buffer,"illegal operand/s.");
+								return FOUND_ERROR;
+							}
 							res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.
 							operands.label_with_ops.operands[num_of_operands].reg = operand;
 							++num_of_operands;
 							strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
 							strcpy(last_portion, sub_str_temp);
-							printf("last portion 3 is: %s\n", last_portion);
 							break;
 						/*No operands - error.*/	
 						case SET3:
@@ -595,7 +582,11 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 				/*Checking if the operand is a valid long integer*/
 				else if(is_immediate(current_portion) != LONG_MIN) {
 					operand = is_immediate(current_portion);
-					printf("operand is: %ld\n", operand);
+					if(operand == FOUND_ERROR){
+						res->syntax_option = sst_syntax_error;
+						strcpy(res->syntax_error_buffer,"Constant number is out of 8 bit range.");
+						return FOUND_ERROR;
+							}
 					switch(determine_set(command_flag)) {
 						case SET1:
 							printf("current_portion is: %s\n", current_portion);
@@ -612,17 +603,20 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 							++num_of_operands;
 							strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
 							strcpy(last_portion, sub_str_temp);
-							printf("last portion 2 is: %s\n", last_portion);
 							break;	
 						case SET2:
-						
+							/*The only set 2 commands that have a comma are ones with a label with operands.*/
+							if(res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.ops_tag != 								sst_tag_op_label_with_operands){
+								res->syntax_option = sst_syntax_error;
+								strcpy(res->syntax_error_buffer,"illegal operand/s.");
+								return FOUND_ERROR;
+							}
 							res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.ops_tag = 								sst_tag_op_c_number;
 							res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.
 							operands.c_number = operand;
 							++num_of_operands;
 							strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
 							strcpy(last_portion, sub_str_temp);
-							printf("last portion 2 is: %s\n", last_portion);
 							break;	
 						case SET3:
 							res->syntax_option = sst_syntax_error;
@@ -643,16 +637,20 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 							++num_of_operands;
 							strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
 							strcpy(last_portion, sub_str_temp);
-							printf("last portion 2 is: %s\n", last_portion);
 							break;	
 						/*1 operand.*/
-						case SET2:							  
+						case SET2:
+							/*The only set 2 commands that have a comma are ones with a label with operands.*/
+							if(res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.ops_tag != 								sst_tag_op_label_with_operands){
+								res->syntax_option = sst_syntax_error;
+								strcpy(res->syntax_error_buffer,"illegal operand/s.");
+								return FOUND_ERROR;
+							}							  
 							strcpy(res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.
 							operands.label_with_ops.operands[num_of_operands].label, current_portion);
 							++num_of_operands;
 							strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
 							strcpy(last_portion, sub_str_temp);
-							printf("last portion 2 is: %s\n", last_portion);
 							break;/*#*/
 						/*No operands.*/
 						case SET3:
@@ -695,11 +693,15 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 					if(last_portion[index_of_tok + 1] != '\0'){
 						strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
 						strcpy(last_portion, sub_str_temp);
-						printf("last portion 2 is: %s\n", last_portion);
 					}
 				}
 				/*Checking if the operand is a valid integer*/
 				else if(is_immediate(current_portion) != LONG_MIN) {
+					if(is_immediate(current_portion) == FOUND_ERROR){
+						res->syntax_option = sst_syntax_error;
+						strcpy(res->syntax_error_buffer,"Constant number is out of 8 bit range.");
+						return FOUND_ERROR;
+					}
 					operand = strtol(current_portion, &token, DEC);	
 					res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.
 					operands.label_with_ops.operands[num_of_operands].c_number = operand;
@@ -707,7 +709,6 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 					if(last_portion[index_of_tok + 1] != '\0'){
 						strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
 						strcpy(last_portion, sub_str_temp);
-						printf("last portion 2 is: %s\n", last_portion);
 					}	
 				}
 				/*Checking if the operand is a label.*/	
@@ -718,7 +719,6 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 					if(last_portion[index_of_tok + 1] != '\0'){
 						strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
 						strcpy(last_portion, sub_str_temp);
-						printf("last portion 2 is: %s\n", last_portion);
 					}
 				}
 				/*The operand is not a register, an integer or a label*/
@@ -761,6 +761,11 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 								/*The second operand is an integer.*/
 								else if(is_immediate(last_portion) != LONG_MIN) {
 									operand = is_immediate(last_portion);
+									if(operand == FOUND_ERROR){
+										res->syntax_option = sst_syntax_error;
+										strcpy(res->syntax_error_buffer,"Constant number is out of 8 bit range.");
+										return FOUND_ERROR;
+									}
 									printf("operand is: %ld\n", operand);	
 									printf("immediate\n");
 									/*Making sure that the operand is not an illegal dest operand*/
@@ -782,8 +787,9 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 									strcpy(res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.
 									operands[num_of_operands].label,last_portion);
 								}
-								/*2nd operand is not a register, integer or label - error*/
+								/*2nd operand is not a register, integer or potential label - error*/
 								else {
+									printf("check label is: %d\n", operand_label_errors(last_portion, res));
 									res->syntax_option = sst_syntax_error;
 									strcpy(res->syntax_error_buffer,"illegal 2nd operand.");
 									return FOUND_ERROR;
@@ -800,6 +806,11 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 							/*Extracting the operand for the rest of the set2 commands.*/
 							else if(num_of_operands == 0) {
 								operand = check_reg(last_portion);
+								if(operand == FOUND_ERROR) {
+									res->syntax_option = sst_syntax_error;
+									strcpy(res->syntax_error_buffer,"Missing operand.");
+									return FOUND_ERROR;
+								}
 								/*Operand is a register.*/
 								if(operand != -1) {
 									res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.
@@ -808,13 +819,17 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 									set_1_operands.operands.reg = operand;
 									++num_of_operands;
 									strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
-									strcpy(last_portion, sub_str_temp);
-									printf("last portion 2 is: %s\n", last_portion);	
+									strcpy(last_portion, sub_str_temp);	
 								}
 								/*Checking if the operand is a valid integer*/
 								else if(is_immediate(last_portion) != LONG_MIN) {
 									/*From set2, only prn can have immediate as an operand.*/
 									if(command_flag == PRN) {
+										if(is_immediate(last_portion) == FOUND_ERROR){
+											res->syntax_option = sst_syntax_error;
+											strcpy(res->syntax_error_buffer,"Constant number is out of 8 bit range.");
+											return FOUND_ERROR;
+										}
 										res->asm_directive_and_cpu_instruction.instruction_syntax.
 										inst_operands.set_1_operands.ops_tag = sst_tag_op_c_number;
 										res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.
@@ -822,7 +837,6 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 										++num_of_operands;
 										strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
 										strcpy(last_portion, sub_str_temp);
-										printf("last portion 2 is: %s\n", last_portion);
 									}
 									else {
 										res->syntax_option = sst_syntax_error;
@@ -832,6 +846,8 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 								}
 								/*Operand is a label*/
 								else if(operand_label_errors(last_portion, res) != FOUND_ERROR) {
+									res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.ops_tag=
+									sst_tag_op_label;
 									strcpy(res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.
 									operands.label, last_portion);
 									++num_of_operands;	
@@ -847,15 +863,14 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 						case SET3:
 							if(!is_empty(last_portion)) {
 								res->syntax_option = sst_syntax_error;
-								strcpy(res->syntax_error_buffer,"illegal characters after stop/ rts.");
+								strcpy(res->syntax_error_buffer,"illegal characters/ operands after stop/ rts.");
 								return FOUND_ERROR;
 							}
 							else
 								break;	
 				}
 				break;
-		}/*End of external switch - case*/
-		printf("end is: %d\n", end);	
+		}/*End of external switch - case*/	
 	}/*End of while loop*/
 	return 0;
 }
@@ -883,10 +898,9 @@ long int is_immediate(char str[]){
     for(i = 1; i < strlen(portion); i++)
 	copy[i -1] = portion[i];
     copy[i - 1] = '\0';
- 
     imm = strtol(copy, &endptr, DEC); 
-
-    printf("copy is: %s and imm is: %ld\n", copy, imm);
+    if(imm < BIT_RANGE_LOW || imm > BIT_RANGE_HIGH)
+	return FOUND_ERROR;
     i = 1;
     if (portion[i] == '-' || portion[i] == '+') {
         i++;
@@ -903,6 +917,7 @@ long int is_immediate(char str[]){
 
 void print_sst(struct sst res){
 	int i;
+	printf("label is: %s\n", res.label);
 	printf("syntax option is: %d\n", res.syntax_option);
 	switch(res.syntax_option){
 		
@@ -952,14 +967,24 @@ void print_sst(struct sst res){
 			res.asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag == sst_tag_cpu_i_jsr){
 
 			if(res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.ops_tag != 						sst_tag_op_label_with_operands){
-			
+		/*Printing tree for commands with 1 operand excluding label with operands.*/	
 	    printf("Operand tag: %d\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.ops_tag);
             printf("Operand register: %ld\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.reg);
-            printf("Operand constant number: %ld\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.operands[0].c_number);
-            printf("Operand label: %s\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.operands[0].label);
-
-			}	
+            printf("Operand constant number: %ld\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.c_number );
+            printf("Operand label: %s\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.label);
+			}
+			else {
+		/*Printing tree for commands with 1 operand that's a label with operands.*/
+	    printf("Operand tag: %d\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.ops_tag);
+	    printf("label is: %s\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.label_with_ops.label);
+	    printf("Register1 is: %ld\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.label_with_ops.operands[0].reg);
+	    printf("constant number1 is: %ld\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.label_with_ops.operands[0].c_number);
+	    printf("Label1 is: %s\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.label_with_ops.operands[0].label);
+	    printf("Register2 is: %ld\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.label_with_ops.operands[1].reg);
+	    printf("constant number2 is: %ld\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.label_with_ops.operands[1].c_number);
+	    printf("Label2 is: %s\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.label_with_ops.operands[1].label);
 		}
+	}
 			break;
 		case sst_syntax_error:
 			printf("error is: %s\n",res.syntax_error_buffer);
@@ -969,8 +994,6 @@ void print_sst(struct sst res){
 			break;
 		case sst_comment:
 			printf("This is a comment\n");
-
-		/*, case sst_instruction:*/
 	}
 }
 
@@ -978,7 +1001,7 @@ void print_sst(struct sst res){
 /*TEMPORARY - FOR TESTING ONLY*/
 int main()
 {
-	char test[] = "  .entry";
+	char test[] = "LO1tOP: .string one";
 	char test1[] = ".string \"This is the way\"";
 	sst_get_stt_from_line(test);
 	return 0;
