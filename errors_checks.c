@@ -110,30 +110,35 @@ int is_ascii(char c);
 
 
 
-int label_errors(char str[], struct sst *res)
-{
+int label_errors(char str[], struct sst *res){
 	int i;
+	char *label;
 	/*Checking if the first char is ':', meaning if the label is empty*/
-	if(str[0] == '\0')
-	{
+	if(str[0] == '\0'){
 		res->syntax_option = sst_syntax_error;
 		strcpy(res->syntax_error_buffer,"label is empty");
 		return FOUND_ERROR;
 	}
+	label = strtok(str, " \t");
 	/*Checking if the label is a command/ register/ directive*/
-	if(is_command(str) ==  1 || is_reg(str) == 1 || is_directive(str) == 1)
-	{
+	if(is_command(label) ==  1 || is_reg(label) == 1 || is_directive(label) == 1){
 		res->syntax_option = sst_syntax_error;
 		strcpy(res->syntax_error_buffer,"label name is a command/ directive/ register");
 		return FOUND_ERROR;
 	}	
-	for(i = 0; i < strlen(str); i++)
-		if(!isalpha(str[i]))
-		{
+	for(i = 0; i < strlen(label); i++)
+		if(!(isalpha(label[i]) || isdigit(label[i]))){
 			res->syntax_option = sst_syntax_error;
-			strcpy(res->syntax_error_buffer,"label has non-alphabetical characters.");
+			strcpy(res->syntax_error_buffer,"illegal label.");
 			return FOUND_ERROR;
 		}
+	label = strtok(NULL, " \t");
+	if(label != NULL){
+
+		res->syntax_option = sst_syntax_error;
+		strcpy(res->syntax_error_buffer,"illegal label.");
+		return FOUND_ERROR;
+	}
 	return 1;		
 }
 
@@ -180,7 +185,7 @@ int directive_string_errors(char str[], struct sst *res)
 		{
 			res->syntax_option = sst_syntax_error;
 			strcpy(res->syntax_error_buffer,"No operands after directive");
-			return 1;
+			return FOUND_ERROR;
 		}
 		if(apostrophes_flag == 1 && str[i] == '\"')
 			apostrophes_flag = 0;
@@ -191,7 +196,7 @@ int directive_string_errors(char str[], struct sst *res)
 		{
 			res->syntax_option = sst_syntax_error;
 			strcpy(res->syntax_error_buffer," illegal character/s after .string");
-			return 1;	
+			return FOUND_ERROR;	
 		}
 		else if(str[i] == '\"')
 			apostrophes_flag = 1;
@@ -200,16 +205,16 @@ int directive_string_errors(char str[], struct sst *res)
 		{
 			res->syntax_option = sst_syntax_error;
 			strcpy(res->syntax_error_buffer,"A character after .string is not ascii.");
-			return 1;
+			return FOUND_ERROR;
 		}
 	}
 	if(apostrophes_flag == 1)
 	{
 		res->syntax_option = sst_syntax_error;
 		strcpy(res->syntax_error_buffer,"Missing apostrophes");
-		return 1;
+		return FOUND_ERROR;
 	}
-	return 0;	
+	return 1;	
 }
 
 int directive_entext_errors(char str[], struct sst *res)
@@ -226,9 +231,9 @@ int directive_entext_errors(char str[], struct sst *res)
 	strcpy(copy, str);
 	portion = strtok(copy, " \t");
 	for(i = 0; i < strlen(portion); i++){
-		if(!isalpha(str[i])) {
+		if(!(isalpha(str[i]) || isdigit(str[i]))) {
 			res->syntax_option = sst_syntax_error;
-			strcpy(res->syntax_error_buffer,"label has non-alphabetical characters.");
+			strcpy(res->syntax_error_buffer,"illegal label name.");
 			return FOUND_ERROR;
 		}
 	}
@@ -265,9 +270,9 @@ int operand_label_errors(char str[], struct sst *res) {
 	strcpy(copy, str);
 	portion = strtok(copy, " \t");
 	for(i = 0; i < strlen(portion); i++){
-		if(!isalpha(str[i])) {
+		if(!(isalpha(portion[i]) || isdigit(portion[i]))) {
 			res->syntax_option = sst_syntax_error;
-			strcpy(res->syntax_error_buffer,"label has non-alphabetical characters.");
+			strcpy(res->syntax_error_buffer,"illegal label as operand.");
 			return FOUND_ERROR;
 		}
 	}
