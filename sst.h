@@ -1,19 +1,29 @@
-/*This module analyzes the text */
+/*This module analyzes the text and builds a syntax tree out of a given line. */
 
 #define MAX_LABEL_LENGTH 30
 #define MAX_STRING_DEF_LEN 80
 #define MAX_DATA_DEF_LEN 80
 #define MAX_SYNTAX_ERR_LEN 120
-#define MAX_WARNING 40
 #define NUM_OF_CMD 16
 #define NUM_OF_REGS 8
 #define NUM_OF_INSTRUCTIONS 4
 #define WORD_SIZE 10
-#define REG_SIZE 2
 #define NUM_OF_SEPERATORS 6
 #define MAX_LINE 80
 #define NUM_OF_TOKENS 5
 #define DEC 10
+#define FOUND_ERROR -2
+#define SET1 2
+#define SET2 1
+#define SET3 0
+#define CMP 1
+#define LEA 6
+#define JMP 9
+#define BNE 10
+#define PRN 12
+#define JSR 13
+#define BIT_RANGE_LOW -128
+#define BIT_RANGE_HIGH 127
 
 enum sst_directive_tag {
     sst_tag_dir_data,
@@ -81,7 +91,6 @@ struct sst {
 
                 char string[MAX_STRING_DEF_LEN + 1];
 		struct  {
-		    char warning[MAX_WARNING + 1];
                     char label[MAX_LABEL_LENGTH + 1];
 		}label_array;
             }dir;
@@ -92,8 +101,8 @@ struct sst {
                 struct {
                     enum sst_operand_tag ops_tags[2];
                     union {
-                        char reg;
-                        char c_number;
+                        long int reg;
+                        long int c_number;
                         char label[MAX_LABEL_LENGTH +1];
                     }operands[2];
                 }set_2_operands;
@@ -104,14 +113,14 @@ struct sst {
                             char label[MAX_LABEL_LENGTH +1];
                             enum sst_operand_tag ops_tags[2];
                             union {
-                                char reg;
-                                char c_number;
+                                long int reg;
+                                long int c_number;
                                 char label[MAX_LABEL_LENGTH +1];
                             }operands[2];
                         }label_with_ops;
 
-                        char reg;
-                        char c_number;
+                        long int reg;
+                        long int c_number;
                         char label[MAX_LABEL_LENGTH +1];
                     }operands;
                 }set_1_operands;
@@ -119,5 +128,6 @@ struct sst {
         }instruction_syntax;
     }asm_directive_and_cpu_instruction;
 };
+
 
 
