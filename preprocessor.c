@@ -275,31 +275,6 @@ int is_empty(char str[])
 
 
 
-int main(int argc, char *argv[])
-{
-	/*Declarations and initializations.*/
-	FILE *fptr;
-	int i, flag;
-	char* file_name = "test.txt";
-	char extension[] = ".am";
-	char *text = (char*)malloc(sizeof(char)); 
-
-			/*Making sure that the system managed to properly allocate memory for input.*/
-			if (text == NULL)
-			{
-				printf("Could not allocate memory for the file content.\n");
-				return END_PROGRAM;
-			}
-			/*Making sure that the system was able to open the file.*/
-			
-
-			preprocessor(file_name);
-
-	return 0;
-}
-
-
-
 Macro* create_macro(char macro_name[]) {
     Macro *new_macro = (Macro*) malloc(sizeof(Macro));
     strcpy(new_macro->macro_name, macro_name);
