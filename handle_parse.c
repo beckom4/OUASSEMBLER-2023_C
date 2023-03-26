@@ -1,3 +1,5 @@
+/*-----INCLUDES-----*/
+
 #include "sst.h"
 #include "errors_checks.h"
 #include "handle_parse.h"
@@ -6,7 +8,7 @@
 #include <stdio.h>
 #include <limits.h>
 
-/*inclusion of functions from errors_checks.c*/
+/*-----FUNCTIOON IMPORT------*/
 extern int directive_data_errors(char str[], struct sst *res);
 extern int directive_string_errors(char str[], struct sst *res);
 extern int directive_entext_errors(char str[], struct sst *res);
@@ -17,21 +19,66 @@ extern long int check_reg(const char str[]);
 extern long int is_immediate(char str[]);
 extern int is_empty(const char str[]);
 
+/*-----FUNCTION DECLARATIONS------*/
 
+/**
+ * Handles the parses that were carved up using the token '('.
+ * 
+ * @param last_portion - The strinng to check.
+ * 	  command_flag - The nummerical value( according to the command table) of the command.
+ *        index_of_tok - The index in which the token has been discovered.
+ *        res - The sst.
+ * @return 1 if the process went smoothly.
+ *         FOUND_ERROR if an error was found.
+ */
 int handle_open_bracket(char last_portion[], int command_flag, int index_of_tok, struct sst *res);
 
 
-
-
+/**
+ * Handles the parses that were carved up using the token ','.
+ * 
+ * @param last_portion - The strinng to check.
+ * 	  command_flag - The nummerical value( according to the command table) of the command.
+ *        num_of_operands - The number of operands that were discovered in the line so far.
+ *        comma - The number of commas that were discovered so far.
+ *        open_bracket - The number of open brackets that were discovered so far.
+ *        close_bracket - The number of close brackets that were discovered so far.
+ *        index_of_tok - The index in which the token has been discovered.
+ *        res - The sst.
+ * @return 1 if the process went smoothly.
+ *         FOUND_ERROR if an error was found.
+ */
 int handle_comma(int command_flag, int num_of_operand, int comma, int close_bracket, int open_bracket, char last_portion[], int index_of_tok, struct sst *res);
 
 
-
+/**
+ * Handles the parses that were carved up using the token ')'.
+ * 
+ * @param last_portion - The strinng to check.
+ * 	  command_flag - The nummerical value( according to the command table) of the command.
+ *        num_of_operands - The number of operands that were discovered in the line so far.
+ *        open_bracket - The number of open brackets that were discovered so far.
+ *        close_bracket - The number of close brackets that were discovered so far.
+ *        index_of_tok - The index in which the token has been discovered.
+ *        res - The sst.
+ * @return 1 if the process went smoothly.
+ *         FOUND_ERROR if an error was found.
+ */
 int handle_close_bracket(int command_flag, int num_of_operands, int close_bracket, int open_bracket, char last_portion[], int index_of_tok, struct sst *res);
 
 
-
+/**
+ * Handles the case where we were not able to parse the string or parts of it.
+ * 
+ * @param last_portion - The strinng to check.
+ * 	  command_flag - The nummerical value( according to the command table) of the command.
+ *        num_of_operands - The number of operands that were discovered in the line so far.
+ *        res - The sst.
+ * @return 1 if the process went smoothly.
+ *         FOUND_ERROR if an error was found.
+ */
 int found_no_token(int command_flag, int num_of_operands, char last_portion[], struct sst *res);
+
 
 /**
  * Determines how many operands are expected per the set definition in the heeader file.
@@ -43,6 +90,7 @@ int found_no_token(int command_flag, int num_of_operands, char last_portion[], s
  */
 int determine_set(int command_flag);
 
+/*-----FUNCTIONS-----*/
 
 int handle_open_bracket(char last_portion[], int command_flag, int index_of_tok, struct sst *res){
 	int i;
@@ -64,13 +112,7 @@ int handle_open_bracket(char last_portion[], int command_flag, int index_of_tok,
 	}
 	else
 		return FOUND_ERROR;
-}
-
-
-
-
-
-
+}/*End of handle_open_bracket.*/
 
 int handle_comma(int command_flag, int num_of_operands, int comma, int close_bracket, int open_bracket, char last_portion[], int index_of_tok, struct sst *res){
 	int i;
@@ -192,10 +234,7 @@ int handle_comma(int command_flag, int num_of_operands, int comma, int close_bra
 			return FOUND_ERROR;
 		}
 		return 1;
-}
-
-
-
+}/*End of handle_comma.*/
 
 
 int handle_close_bracket(int command_flag, int num_of_operands, int close_bracket, int open_bracket, char last_portion[], int index_of_tok, struct sst *res) {
@@ -204,7 +243,7 @@ int handle_close_bracket(int command_flag, int num_of_operands, int close_bracke
 	char current_portion[MAX_LINE];
 
 	/*Only commands with one operand whose a label with 2 ops should have brackets.*/
-	if(determine_set(command_flag) != SET2 || res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.ops_tag != 			sst_tag_op_label_with_operands){
+	if(determine_set(command_flag) != SET2 || res->asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.ops_tag != 				sst_tag_op_label_with_operands){
 			res->syntax_option = sst_syntax_error;
 			strcpy(res->syntax_error_buffer,"Extra comma/s.");
 			return FOUND_ERROR;
@@ -244,10 +283,7 @@ int handle_close_bracket(int command_flag, int num_of_operands, int close_bracke
 		return FOUND_ERROR;
 	}
 	return 1;
-}
-
-
-
+}/*End of handle_close_bracket.*/
 
 
 int found_no_token(int command_flag, int num_of_operands, char last_portion[], struct sst *res){
@@ -356,7 +392,7 @@ int found_no_token(int command_flag, int num_of_operands, char last_portion[], s
 		break;	
 	}
 	return 1;
-}
+}/*End of found_no_token.*/
 
 
 int determine_set(int command_flag) {
@@ -368,4 +404,4 @@ int determine_set(int command_flag) {
 			return SET2;
 	else
 		return SET1;
-}
+}/*End of determine_set.*/
