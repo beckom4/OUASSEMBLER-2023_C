@@ -1,23 +1,30 @@
+/* -------------------------------------------- */
+
+/**
+* MAMAN 14, FILE: assembler.c
+* authors: Linoy daniel & Omri Beck
+**/
+
+/* -------------------------------------------- */
+
+
+
+/* --------- INCLUDES: --------- */
+
+
 #include "dynarray.h"
 
-/*
 
-Dynamic Array
+/* --------- FUNCTIONS IMPLEMENTATION: --------- */
 
-A dynarray has three hidden fields of type `size_t` stored in it's header:
-    - capacity: size in `stride`-sized units of the allocated buffer.
-    - length: the number of `stride`-sized units currently filled.
-    - stride: the sizeof the datatype being stored in the dynarray.
 
-To get the ith element in the array, you can use bracket notation (`arr[i]`),
-or the `dynarray_get` method which does bounds checking.
-
-To set the ith element of the array, use either bracket notation
-(`arr[i] = x;`), or the `dynarray_set` method which does bounds checking.
-*/
-
-/* Returns a pointer to the start of a new dynarray (after the header) which
- has `init_cap` units of `stride` bytes. */
+/** 
+* creates a dynamic array. 
+*
+* @param int _cap - The initial capacity.
+*  	 stride - The size of the data type.
+* @return - a pointer to the beginning of the new array.
+* */
 void *_dynarray_create(size_t init_cap, size_t stride)
 {
     size_t header_size = DYNARRAY_FIELDS * sizeof(size_t);
@@ -29,25 +36,49 @@ void *_dynarray_create(size_t init_cap, size_t stride)
     return (void *) (arr + DYNARRAY_FIELDS);
 }
 
+
+/** 
+* Frees the memory allocated for the array.. 
+*
+* @param A pointer to the beginning of the array.
+* */
 void _dynarray_destroy(void *arr)
 {
     free((char*)arr - DYNARRAY_FIELDS * sizeof(size_t));
 }
 
-/* Returns the dynarray's field which is specified by passing
- one of CAPACITY, LENGTH, STRIDE. */
+
+/** 
+* get function  to retrieve 1 of the fields in the array. 
+*
+* @param A pointer to the beginning of the array.
+*  	 field - The index of the field in the array.
+* @return - The requested field.
+* */
 size_t _dynarray_field_get(void *arr, size_t field)
 {
     return ((size_t *)(arr) - DYNARRAY_FIELDS)[field];
 }
 
+
+/** 
+* set function  to set 1 of the fields in the array. 
+*
+* @param A pointer to the beginning of the array.
+*  	 field - The index of the field in the array.
+* */
 void _dynarray_field_set(void *arr, size_t field, size_t value)
 {
     ((size_t *)(arr) - DYNARRAY_FIELDS)[field] = value;
 }
 
-/* Allocates a new dynarray with twice the size of the one passed in, and retaining
- the values that the original stored. */
+
+/** creates a new dynamic array with twice the size of the one passed in, and retaining
+ the values that the original stored. 
+*
+* @param A pointer to the beginning of the old array.
+* @return - A pointer to the biginning of the new array.
+* */
 void *_dynarray_resize(void *arr)
 {
     void *temp = _dynarray_create( 
@@ -60,6 +91,13 @@ void *_dynarray_resize(void *arr)
     return temp;
 }
 
+
+/** inserts a new element into the array.
+*
+* @param A pointer to the beginning of the array.
+*        xptr - The new element that needs to be added.
+* @return - A pointer to the biginning of the array.
+* */
 void *_dynarray_push(void *arr, void *xptr)
 {
     if (dynarray_length(arr) >= dynarray_capacity(arr))
@@ -70,7 +108,12 @@ void *_dynarray_push(void *arr, void *xptr)
     return arr;
 }
 
-/*Removes the last element in the array, but copies it to `*dest` first. */
+
+/** Removes the last element in the array and copies it to dest.
+*
+* @param A pointer to the beginning of the array.
+*        dest - The new memory destination of the removed element.
+* */
 void _dynarray_pop(void *arr, void *dest)
 {
     memcpy(dest, (char*)arr + (dynarray_length(arr) - 1) * dynarray_stride(arr), dynarray_stride(arr));
