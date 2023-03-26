@@ -101,7 +101,6 @@ int preprocessor(char *file_name)
 	new_txt = (char*)malloc(sizeof(char)*MAX_LINE);
 
 	head = NULL, current = NULL, macro= NULL;
-	printf("file nammmmmmmmme is: %s\n", file_name);
 	fptr = fopen(file_name, "r");
 	if(fptr == NULL){
 		fprintf(stderr, "unable to open file\n");
@@ -122,10 +121,8 @@ int preprocessor(char *file_name)
 		portion = strtok(copy," \t");
 		while(portion != NULL)
 		{
-			printf("flag\n");
 			/*Checking if there's a word in the line that needs to be replaced with a macro*/
 			current = search(head, portion);
-			printf("flag1\n");
 			if(current != NULL)
 			{
 				size += MAX_LINE;
@@ -171,7 +168,6 @@ int preprocessor(char *file_name)
 			if(portion1 != NULL)
 				flag = MCR;
 		}
-		printf("flag2\n");
 		switch(flag) {
              		case 0: 
 				flag = 0;
@@ -207,7 +203,6 @@ int preprocessor(char *file_name)
 			/*endmcr found*/
 			 case ENDMCR:
 				flag = 0;
-				printf("macro name is %s and macro body is %s\n", macro-> macro_name, macro-> macro_body);
 				add_to_end(&head, macro);
 				macro = NULL;
 			    	break;
@@ -215,7 +210,6 @@ int preprocessor(char *file_name)
 				flag = 0;
 				break;
             	}  
-				printf("we are here\n");
 	}
 	printf("new txt is: %s\n", new_txt);	
 	error_flag = produce_file(new_txt, file_name);
