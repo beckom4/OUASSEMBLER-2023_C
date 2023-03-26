@@ -1,4 +1,13 @@
-/*This file is part of the sst module. It's responsible for analyzing and handling the different parses that were carved up from the original line.*/
+/* -------------------------------------------- */
+
+/** 
+* MAMAN 14, FILE: handle_parse.h
+* @authors: Linoy daniel & Omri Beck
+* This file is part of the sst module. It's responsible for analyzing and handling the different parses that were carved up from the original line.
+**/
+
+/* -------------------------------------------- */
+
 
 int handle_open_bracket(char last_portion[], int command_flag, int index_of_tok, struct sst *res);
 
