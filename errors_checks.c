@@ -1,3 +1,5 @@
+/*-----INCLUDES-----*/
+
 #include "sst.h"
 #include "errors_checks.h"
 #include "handle_parse.h"
@@ -6,112 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/**
- * Checks the label for errors.
- * 
- * @param str - the string to check.
- *        res - a pointer to the sst.
- * @return 1 - No errors found.
- *         FOUND_ERROR - error found.
- */
-int label_errors(char str[], struct sst *res);
-/**
- * Checks the directive data for errors.
- * 
- * @param str - the string to check.
- *        res - a pointer to the sst.
- * @return 1 - No errors found.
- *         FOUND_ERROR - error found.
- */
-int directive_data_errors(char str[], struct sst *res);
-
-/**
- * Checks the directive string for errors.
- * 
- * @param str - the string to check.
- *        res - a pointer to the sst.
- * @return 1 - No errors found.
- *         FOUND_ERROR - error found.
- */
-int directive_string_errors(char str[], struct sst *res);
-
-/**
- * Checks the directives entry and extern for errors.
- * 
- * @param str - the string to check.
- *        res - a pointer to the sst.
- * @return 1 - No errors found.
- *         FOUND_ERROR - error found.
- */
-int directive_entext_errors(char str[], struct sst *res);
-
-/**
- * Checks a command with no operands for errors.
- * 
- * @param str - the string to check.
- *        res - a pointer to the sst.
- * @return 1 - No errors found.
- *         FOUND_ERROR - error found.
- */
-int no_operands_errors(char str[], struct sst *res);
-
-/**
- * Checks a command with with a label as operand for errors.
- * 
- * @param str - the string to check.
- *        res - a pointer to the sst.
- * @return 1 - No errors found.
- *         FOUND_ERROR - error found.
- */
-int operand_label_errors(char str[], struct sst *res);
-
-/**
- * Checks if a string is empty or not.
- * 
- * @param str - the string to check.
- * @return 1 - No errors found.
- *         FOUND_ERROR - error found.
- */
-int is_empty_error(char str[]);
-
-/**
- * Checks if a string is a directive or not.
- * 
- * @param str - the string to check.
- * @return 1 - the string is a directive.
- *         0 - the string is not a directive.
- */
-int is_directive(char str[]);
-
-/**
- * Checks if a string is a register or not.
- * 
- * @param str - the string to check.
- * @return 1 - The string is a register.
- *         0 - The string is not a register.
- */
-int is_reg(char str[]);
-
-/**
- * Checks if a string is a command or not.
- * 
- * @param str - the string to check.
- * @return 1 - The string is a coammnd.
- *         0 - The string is not a command.
- */
-int is_command(char str[]);
-
-/**
- * Checks if a char is ascii or not.
- * 
- * @param str - the char to check.
- * @return 1 - The char is ascii.
- *         0 - The char is not ascii.
- */
-int is_ascii(char c);
-
-
-
+/*-----FUNCTIONS-----*/
 int label_errors(char str[], struct sst *res){
 	int i;
 	char *label;
@@ -142,13 +39,15 @@ int label_errors(char str[], struct sst *res){
 		return FOUND_ERROR;
 	}
 	return 1;		
-}
+}/*End of label_errors.*/
 
 int directive_data_errors(char str[], struct sst *res)
 {
 	int i, nr_begin, num;
 	char *portion;
 	nr_begin = 0;
+
+
 	/*Checking if there are too many commas in the text*/
 	if(is_empty_error(str) == 1 || str[0] == '\0'){
 		res->syntax_option = sst_syntax_error;
@@ -162,10 +61,12 @@ int directive_data_errors(char str[], struct sst *res)
 			strcpy(res->syntax_error_buffer,"empty parameter/s after .data.");
 			return FOUND_ERROR;
 	}	
-	for(i = 0; i < strlen(str); i++){
+	for(i = 0; i < strlen(portion) - 1; i++){
 		/*This is the first digit.*/
-		if(isdigit(portion[i]) && nr_begin == 0) 
+		if(isdigit(portion[i]) && nr_begin == 0){ 
 			nr_begin = 1;
+			continue;
+		}
 		/*This is the sign.*/
 		else if((portion[i] == '+' || portion[i] == '-') && nr_begin == 0)
 			continue;
@@ -191,7 +92,7 @@ int directive_data_errors(char str[], struct sst *res)
 			return FOUND_ERROR;
 	}
 	return 1;	
-}
+}/*End of directive_data_errors.*/
 
 int directive_string_errors(char str[], struct sst *res)
 {
@@ -234,7 +135,7 @@ int directive_string_errors(char str[], struct sst *res)
 		return FOUND_ERROR;
 	}
 	return 1;	
-}
+}/*End of directive_string_errors.*/
 
 int directive_entext_errors(char str[], struct sst *res)
 {
@@ -264,7 +165,7 @@ int directive_entext_errors(char str[], struct sst *res)
 	}
 	return 1;
 	
-}
+}/*End of directive_ent_ext_errors.*/
 
 int no_operands_errors(char str[], struct sst *res)
 {
@@ -279,7 +180,7 @@ int no_operands_errors(char str[], struct sst *res)
 		}	
 	}
 	return 1;
-}
+}/*End of no_operands_errors.*/
 
 int operand_label_errors(char str[], struct sst *res) {
 	int i;
@@ -302,7 +203,7 @@ int operand_label_errors(char str[], struct sst *res) {
 		return FOUND_ERROR;
 	}
 	return 1;	
-}
+}/*End of operand_label_errors.*/
 
 int is_empty_error(char str[])
 {
@@ -311,12 +212,12 @@ int is_empty_error(char str[])
 		if(!isspace(str[i]))
 			return 0;
 	return 1;
-}
+}/*End of is_empty_errors.*/
 
 int is_ascii(char c) 
 {
 	return (c >= 0 && c <= MAX_ASCII);
-}
+}/*End of is_ascii.*/
 
 
 int is_command(char str[])
@@ -334,7 +235,7 @@ int is_command(char str[])
 	}
 	return 0;
 
-}
+}/*End of is_command.*/
 
 int is_reg(char str[])
 {
@@ -348,7 +249,7 @@ int is_reg(char str[])
 			return 1;
 	}
 	return 0;
-}
+}/*End of is_reg.*/
 
 
 int is_directive(char str[])
@@ -362,4 +263,4 @@ int is_directive(char str[])
 			return 1;
 	}
 	return 0;
-}
+}/*End of is_directive.*/
