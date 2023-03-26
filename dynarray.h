@@ -1,15 +1,22 @@
+/* -------------------------------------------- */
+
+/** 
+* MAMAN 14, FILE: dynarray.h
+* @authors: Linoy daniel & Omri Beck
+* This file defines and omplements a dynamic Array that has 3 fields:
+    - capacity: size in `stride.
+    - length: the number of `stride`-sized units currently filled.
+    - stride: the size of the currentt datatype.
+**/
+
+/* -------------------------------------------- */
+
+
 #ifndef DYNARRAY
 #define DYNARRAY
 
 #include <stdlib.h>     
 #include <string.h>     
-
-/* Structure of a dynarray:
- * size_t capacity
- * size_t length
- * size_t stride
- * void *memory
- */
 
 enum {
     CAPACITY,
