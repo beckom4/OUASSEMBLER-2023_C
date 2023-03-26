@@ -1,3 +1,5 @@
+/*-----INCLUDES-----*/
+
 #include "sst.h"
 #include "errors_checks.h"
 #include "handle_parse.h"
@@ -9,7 +11,7 @@
 #include <stdlib.h>
 #include <limits.h>
 
-/*inclusion of functions from errors_checks.c*/
+/*-----FUNCTIONS IMPORT-----*/
 extern int directive_data_errors(char str[], struct sst *res);
 extern int directive_string_errors(char str[], struct sst *res);
 extern int directive_entext_errors(char str[], struct sst *res);
@@ -21,109 +23,7 @@ extern int handle_comma(int command_flag, int num_of_operand, int comma, int clo
 extern int handle_close_bracket(int command_flag, int num_of_operands, int close_bracket, int open_bracket, char last_portion[], int index_of_tok, struct sst *res);
 extern int found_no_token(int command_flag, int num_of_operands, char last_portion[], struct sst *res);
 
-/*Function declarations:*/
-
-/*TEMPORARY*/
-void print_sst(struct sst my_sst);
-
-/**
- * creates a SST from a line.
- * 
- * @param line - the line to analize.
- * @return struct sst - the sst of the line.
- */
-struct sst sst_get_stt_from_line(const char * line);
-
-/**
- * Determines if the current portion of the line is a valid command(instruction).
- * 
- * @param str - the portion in the line to be checked.
-	  index - a pointer to apointer that holds the address of the location of the beginning of this portion.
- * @return .i_tag - the tag of the command if it is a command, a number 0 - 15.
-	   -1 if this portion is not a command.
- */
-int check_command(const char str[], int **index);
-
-/**
- * Determines if a the current portion of the line is a valid register.
- * 
- * @param str - the portion in the line to be checked.
- * @return .i: a number 0 - 7 that represents the register number.
-	   -1 if this portion is not a valid register.
- */
-long int check_reg(const char str[]);
-
-/**
- * Determines if a the line is an empty line or not.
- * 
- * @param str - the line.
- * @return 1 if the line is empty.
-	   0 if it's not.
- */
-int is_empty(const char str[]);
-
-/**
- * Determines if a the line is a comment or not.
- * 
- * @param str - the line.
- * @return 1 if the line is a comment.
-	   0 if it's not.
- */
-int is_comment(const char str[]);
-
-
-/**
- * Determines if a the current portion is a valid directive.
- * 
- * @param str - the portion to be checked.
-	  index - a pointer to a pointer to the address of the beginning of the portion.
-	  struct sst - the sst of the line.
- * @return i - A number 0-3 that represents the tag of the directive.
-	   -1 if it's not a valid directive.
- */
-int check_directive(const char str[], int **index, struct sst *res);
-
-/**
- * Determines if a the current portion is a valid label.
- * 
- * @param str - the portion to be checked.
-	  struct sst - the sst of the line.
- * @return label_flag - the size of the label, if it is a label.
-	   -1 if it's not a valid label.
- */
-int check_label(struct sst *res, const char *line);
-
-/**
- * Builds the sst of the directive recursively.
- * 
- * @param directive_flag - the tag of the directive.
-	  last_portion - the portion to be checked.
-	  struct sst - the sst of the line.
- * @return 0
- */
-int handle_directive(int directive_flag, char last_portion[], struct sst *res, int k);
-
-/**
- * Builds the sst of the command recursively.
- * 
- * @param command_flag - the tag of the directive.
-	  last_portion - the portion to be checked.
-	  struct sst - the sst of the line.
-	  num_of_operands - the current number of operands that the function handled.
- * @return 0
- */
-int handle_command(int command_flag, char last_portion[], struct sst *res, int num_of_operands);
-
-/**
- * Determines if the string is a number or not.
- * 
- * @param str - the string to be checked.
- * @return 1 if the string is a valid integer.
-	   0 if it's not. 
- */
-long int is_immediate(char str[]);
-
-
+/*----STRUCTS-----*/
 
 struct sst_token {
 	const char tok;
@@ -162,6 +62,8 @@ static struct sst_cpu_inst sst_cpu_insts[NUM_OF_CMD] = {
     {"stop",sst_tag_cpu_i_stop},
     {"sub",sst_tag_cpu_i_sub},
 };
+
+/*-----FUNCTIONS-----*/
 
 struct sst sst_get_stt_from_line(const char * line) {	
 	char last_portion[MAX_LINE];
@@ -245,7 +147,7 @@ struct sst sst_get_stt_from_line(const char * line) {
 		res.syntax_option = sst_syntax_error;
 
    	return res;
-}
+}/*End of sst_get_stt_from_line*/
 
 int check_command(const char str[], int **index) {
 	int left, right, mid, j, parse_begin, parse_end,temp;
@@ -280,7 +182,7 @@ int check_command(const char str[], int **index) {
    	}
 	**index = temp;
     	return -1;
-}
+}/*End of check_command*/
 
 
 long int check_reg(const char str[]) {
@@ -309,7 +211,7 @@ long int check_reg(const char str[]) {
     else {
         return i;
     }
-}
+}/*End of check_reg.*/
 
 
 int is_empty(const char str[]) {
@@ -325,7 +227,7 @@ int is_empty(const char str[]) {
 		return 1;
 	else
 		return 0;
-}
+}/*End of is_empty*/
 
 
 int is_comment(const char str[]) {
@@ -338,7 +240,7 @@ int is_comment(const char str[]) {
 	else
 		return 0;
 
-}
+}/*End of is_comment.*/
 
 int check_directive(const char str[], int **index, struct sst *res) {
 	int i, j, parse_begin,parse_end,temp;
@@ -367,7 +269,7 @@ int check_directive(const char str[], int **index, struct sst *res) {
 	}
 	**index = temp;
 	return -1;
-}
+}/*End of check_directive.*/
 
 
 int check_label(struct sst *res, const char *line) {
@@ -390,7 +292,7 @@ int check_label(struct sst *res, const char *line) {
 		else
 			return FOUND_ERROR;	
 	}		
-}
+}/*End of check_label.*/
 
 int handle_directive(int directive_flag, char last_portion[], struct sst *res, int k)
 {
@@ -410,9 +312,7 @@ int handle_directive(int directive_flag, char last_portion[], struct sst *res, i
 				strcpy(parameter, last_portion);
 				if (directive_data_errors(parameter, res) != FOUND_ERROR){
 					param = strtol(parameter, NULL, DEC);
-					printf("param is: %ld\n", param);
 					res->asm_directive_and_cpu_instruction.syntax_directive.dir.data_array.data_arr[k] = param;
-					printf("the number is: %ld\n", res->asm_directive_and_cpu_instruction.syntax_directive.dir.data_array.data_arr[k]);
 					return 1;
 				}
 				else
@@ -424,11 +324,9 @@ int handle_directive(int directive_flag, char last_portion[], struct sst *res, i
 				strncpy(parameter, last_portion, index_of_tok);
 				parameter[index_of_tok] = '\0';
 				if (directive_data_errors(parameter, res) != FOUND_ERROR){
-					printf("parameter is: %s\n", parameter);
 					param = strtol(parameter, &token, DEC);
-					printf("param is: %ld\n", param);
 					res->asm_directive_and_cpu_instruction.syntax_directive.dir.data_array.data_arr[k] = param;
-					printf("the number is: %ld\n", res->asm_directive_and_cpu_instruction.syntax_directive.dir.data_array.data_arr[k]);
+					res->asm_directive_and_cpu_instruction.syntax_directive.dir.data_array.actual_data_size = k + 1;
 					return handle_directive(directive_flag, sub_str, res, ++k);
 				}
 				else
@@ -465,7 +363,7 @@ int handle_directive(int directive_flag, char last_portion[], struct sst *res, i
 			break;	
 	}
 	return 0;
-}
+}/*End of handle_directive.*/
 
 
 int handle_command(int command_flag, char last_portion[], struct sst *res, int num_of_operands) {
@@ -477,7 +375,6 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 	open_bracket = 0, close_bracket = 0, comma = 0, end = 0;	
 	token = &t;
 	res->syntax_option = sst_instruction;
-
 	res->asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag = command_flag;
 	while(end == 0) {
 		memset(current_portion, '\0', MAX_LINE);
@@ -489,6 +386,7 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 			}
 		}
 		if(token == NULL) {
+			index_of_tok = strlen(last_portion) - 1;
 			end = 1;
 			token = &t;
 		}
@@ -514,7 +412,6 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 					return FOUND_ERROR;
 			case ')':
 				if(handle_close_bracket(command_flag, num_of_operands, close_bracket, open_bracket, last_portion, index_of_tok, res) != FOUND_ERROR) {
-					/*if(last_portion[index_of_tok + 1] != '\0')*/
 					strcpy(sub_str_temp,&last_portion[index_of_tok + 1]);
 					strcpy(last_portion, sub_str_temp);
 					++num_of_operands;
@@ -527,6 +424,7 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 				strcpy(res->syntax_error_buffer,"illegal character.");
 				return FOUND_ERROR;
 			case'"':
+				
 				res->syntax_option = sst_syntax_error;
 				strcpy(res->syntax_error_buffer,"illegal character.");
 				return FOUND_ERROR;
@@ -543,7 +441,7 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 		}/*End of external switch - case*/	
 	}/*End of while loop*/
 	return 0;
-}
+}/*End of handle_command.*/
 
 
 
@@ -572,19 +470,92 @@ long int is_immediate(char str[]){
 	 i++;
     }
     return imm;
+}/*End of is_immediate.*/
+
+
+
+void print_sst(struct sst res){
+	int i;
+	printf("label is: %s\n", res.label);
+	printf("syntax option is: %d\n", res.syntax_option);
+	switch(res.syntax_option){
+		
+		case sst_directive:
+			printf("dir_tag is: %d\n", res.asm_directive_and_cpu_instruction.syntax_directive.dir_tag);
+			if(res.asm_directive_and_cpu_instruction.syntax_directive.dir_tag == sst_tag_dir_data){
+				printf("data section is: \n");
+				i = 0;
+				for(i = 0; i < 2; i++)
+					printf("%ld\t", res.asm_directive_and_cpu_instruction.syntax_directive.dir.data_array.data_arr[i]);
+					
+			}
+			else if(res.asm_directive_and_cpu_instruction.syntax_directive.dir_tag == sst_tag_dir_string){
+				printf("string is: %s\n", res.asm_directive_and_cpu_instruction.syntax_directive.dir.string);
+			}
+			else if(res.asm_directive_and_cpu_instruction.syntax_directive.dir_tag == sst_tag_dir_entry){
+				printf("label is: %s\n", res.asm_directive_and_cpu_instruction.syntax_directive.dir.label_array.label);
+			}
+			else if(res.asm_directive_and_cpu_instruction.syntax_directive.dir_tag == sst_tag_dir_extern){
+				printf("label is: %s\n", res.asm_directive_and_cpu_instruction.syntax_directive.dir.label_array.label);
+			}
+			break;
+		case sst_instruction:
+			printf("instruction tag is: %d\n", res.asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag);
+			if (res.asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag == sst_tag_cpu_i_mov ||
+           		    res.asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag == sst_tag_cpu_i_cmp ||
+            	            res.asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag == sst_tag_cpu_i_add ||
+                            res.asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag == sst_tag_cpu_i_sub ||
+                            res.asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag == sst_tag_cpu_i_lea) {
+            
+            printf("Operand 1 tag: %d\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.ops_tags[0]);
+            printf("Operand 1 register: %ld\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.operands[0].reg);
+            printf("Operand 1 constant number: %ld\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.operands[0].c_number);
+            printf("Operand 1 label: %s\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.operands[0].label);
+
+ 	    printf("Operand 2 tag: %d\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.ops_tags[1]);
+            printf("Operand 2 register: %ld\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.operands[1].reg);
+            printf("Operand 2 constant number: %ld\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.operands[1].c_number);
+            printf("Operand 2 label: %s\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_2_operands.operands[1].label);	
+		}
+		else if(res.asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag == sst_tag_cpu_i_not ||
+           		res.asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag == sst_tag_cpu_i_clr ||
+            	        res.asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag == sst_tag_cpu_i_inc ||
+                        res.asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag == sst_tag_cpu_i_dec ||
+                        res.asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag == sst_tag_cpu_i_jmp ||
+			res.asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag == sst_tag_cpu_i_bne	||
+			res.asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag == sst_tag_cpu_i_red ||
+			res.asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag == sst_tag_cpu_i_prn ||
+			res.asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag == sst_tag_cpu_i_jsr){
+
+			if(res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.ops_tag != 						sst_tag_op_label_with_operands){
+		/*Printing tree for commands with 1 operand excluding label with operands.*/	
+	    printf("Operand tag: %d\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.ops_tag);
+            printf("Operand register: %ld\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.reg);
+            printf("Operand constant number: %ld\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.c_number );
+            printf("Operand label: %s\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.label);
+			}
+			else {
+		/*Printing tree for commands with 1 operand that's a label with operands.*/
+	    printf("Operand tag: %d\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.ops_tag);
+	    printf("label is: %s\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.label_with_ops.label);
+	    printf("Register1 is: %ld\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.label_with_ops.operands[0].reg);
+	    printf("constant number1 is: %ld\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.label_with_ops.operands[0].c_number);
+	    printf("Label1 is: %s\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.label_with_ops.operands[0].label);
+	    printf("Register2 is: %ld\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.label_with_ops.operands[1].reg);
+	    printf("constant number2 is: %ld\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.label_with_ops.operands[1].c_number);
+	    printf("Label2 is: %s\n", res.asm_directive_and_cpu_instruction.instruction_syntax.inst_operands.set_1_operands.operands.label_with_ops.operands[1].label);
+		}
+	}
+			break;
+		case sst_syntax_error:
+			printf("error is: %s\n",res.syntax_error_buffer);
+			break;
+		case sst_white_space:
+			printf("White space\n");
+			break;
+		case sst_comment:
+			printf("This is a comment\n");
+	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
