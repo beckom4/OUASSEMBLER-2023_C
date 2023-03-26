@@ -210,10 +210,8 @@ int preprocessor(char *file_name)
 				flag = 0;
 				break;
             	}  
-	}
-	printf("new txt is: %s\n", new_txt);	
+	}	
 	error_flag = produce_file(new_txt, file_name);
-	printf("name is: %s aand macro body is: %s\n", head->macro_name, head->macro_body);
 	fclose(fptr); 	
 	destroy_list(head);
 	free(new_txt);
