@@ -174,8 +174,6 @@ struct sst sst_get_stt_from_line(const char * line) {
 	i = 0, error_flag = 0, command_flag = -1, directive_flag = -1;
 	index = &i;
 	
-    /*Resetting the label array.*/
-	res.label = {0};
 	
     /*Checking if this is a comment.*/	
     if (is_comment(line) == 1)
@@ -226,10 +224,7 @@ struct sst sst_get_stt_from_line(const char * line) {
 			if (directive_flag == 1){
 				error_flag = directive_string_errors(last_portion, &res);
 			}
-			
-            /*Checking if the directive is .extern and the user defined a label anyway.*/
-			else if (directive_flag == 2 && label_flag != -1) 
-				res . label = {0};		
+		
 			
             if (error_flag != FOUND_ERROR) 
 				handle_directive(directive_flag, last_portion, &res, 0);
