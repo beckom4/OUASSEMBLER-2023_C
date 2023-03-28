@@ -175,7 +175,7 @@ struct sst sst_get_stt_from_line(const char * line) {
 	index = &i;
 	
     /*Resetting the label array.*/
-	memset(res.label,'\0',MAX_LABEL_LENGTH +1);
+	res.label = {0};
 	
     /*Checking if this is a comment.*/	
     if (is_comment(line) == 1)
@@ -225,14 +225,11 @@ struct sst sst_get_stt_from_line(const char * line) {
 		if (directive_flag != -1 && error_flag == 0) {
 			if (directive_flag == 1){
 				error_flag = directive_string_errors(last_portion, &res);
-				if (error_flag != FOUND_ERROR)
-				/*#*/ memset(res.asm_directive_and_cpu_instruction.syntax_directive.dir.data_array.data_arr, BIT_RANGE_HIGH + 1, MAX_LINE_LEN);
 			}
 			
             /*Checking if the directive is .extern and the user defined a label anyway.*/
 			else if (directive_flag == 2 && label_flag != -1) 
-				/*memset(res.label, '\0', sizeof(res.label));*/
-				res -> label = {0};		
+				res . label = {0};		
 			
             if (error_flag != FOUND_ERROR) 
 				handle_directive(directive_flag, last_portion, &res, 0);
@@ -598,7 +595,6 @@ int handle_command(int command_flag, char last_portion[], struct sst *res, int n
 	res -> asm_directive_and_cpu_instruction.instruction_syntax.cpu_i_tag = command_flag;
 	
     while(end == 0) {
-		memset(current_portion, '\0', MAX_LINE_LEN);
 		
         for(i = 0 ; i < NUM_OF_TOKENS ; i++) {
 			token = strchr(last_portion, tokens[i].tok);	
